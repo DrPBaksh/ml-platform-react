@@ -1,5 +1,5 @@
 import React from 'react';
-import { Heart, Shield, FileText, Mail } from 'lucide-react';
+import { Heart, Shield, FileText, Mail, Globe, Lock } from 'lucide-react';
 
 const Footer = () => {
   return (
@@ -9,68 +9,85 @@ const Footer = () => {
           {/* Brand */}
           <div className="col-span-2">
             <div className="flex items-center space-x-3 mb-4">
-              <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-700 rounded-xl">
+              <img 
+                src="/logo.png" 
+                alt="ML Platform Logo" 
+                className="w-10 h-10 rounded-xl"
+                onError={(e) => {
+                  e.target.style.display = 'none';
+                  e.target.nextSibling.style.display = 'flex';
+                }}
+              />
+              <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-700 rounded-xl items-center justify-center" style={{display: 'none'}}>
                 <span className="text-white font-bold">ML</span>
               </div>
               <div>
                 <h3 className="text-lg font-bold">ML Platform</h3>
-                <p className="text-sm text-gray-400">Machine Learning Made Simple</p>
+                <p className="text-sm text-gray-400">Data Analysis Made Simple</p>
               </div>
             </div>
             <p className="text-gray-400 text-sm leading-relaxed mb-4">
-              Empowering businesses with enterprise-grade machine learning tools. 
-              Transform your data into actionable insights without writing a single line of code.
+              The complete machine learning platform designed for UK DA4 (Level 4 Data Analyst) apprentices and data professionals. 
+              Master data analysis, visualization, and machine learning with our browser-based educational tool.
             </p>
-            <div className="flex items-center space-x-1 text-sm text-gray-400">
-              <span>Made with</span>
-              <Heart className="h-4 w-4 text-red-500" />
-              <span>by the ML Platform Team</span>
+            <div className="space-y-2">
+              <div className="flex items-center space-x-2 text-sm text-green-400">
+                <Lock className="h-4 w-4" />
+                <span>100% Browser-Based - Your Data Never Leaves Your Device</span>
+              </div>
+              <div className="flex items-center space-x-1 text-sm text-gray-400">
+                <span>© 2025 Peter Baksh. Made with</span>
+                <Heart className="h-4 w-4 text-red-500" />
+                <span>for DA4 apprentices</span>
+              </div>
             </div>
           </div>
 
-          {/* Legal */}
+          {/* DA4 Apprenticeship Info */}
           <div>
-            <h4 className="text-sm font-semibold text-white mb-4 uppercase tracking-wider">Legal</h4>
+            <h4 className="text-sm font-semibold text-white mb-4 uppercase tracking-wider">DA4 Apprenticeship</h4>
             <ul className="space-y-3 text-sm">
               <li>
-                <a href="#" className="text-gray-400 hover:text-white transition-colors duration-200 flex items-center space-x-2">
-                  <FileText className="h-4 w-4" />
-                  <span>Terms of Service</span>
-                </a>
+                <p className="text-gray-400">
+                  Perfect for Level 4 Data Analyst apprentices learning:
+                </p>
               </li>
+              <li className="text-gray-300">• Statistical Analysis</li>
+              <li className="text-gray-300">• Data Visualization</li>
+              <li className="text-gray-300">• Machine Learning Basics</li>
+              <li className="text-gray-300">• Business Intelligence</li>
               <li>
-                <a href="#" className="text-gray-400 hover:text-white transition-colors duration-200 flex items-center space-x-2">
-                  <Shield className="h-4 w-4" />
-                  <span>Privacy Policy</span>
-                </a>
-              </li>
-              <li>
-                <a href="#" className="text-gray-400 hover:text-white transition-colors duration-200 flex items-center space-x-2">
-                  <FileText className="h-4 w-4" />
-                  <span>Data Processing</span>
+                <a href="https://www.gov.uk/government/publications/apprenticeship-standard-data-analyst" 
+                   target="_blank" 
+                   rel="noopener noreferrer"
+                   className="text-primary-400 hover:text-primary-300 transition-colors duration-200 flex items-center space-x-1">
+                  <Globe className="h-4 w-4" />
+                  <span>Official DA4 Standard</span>
                 </a>
               </li>
             </ul>
           </div>
 
-          {/* Contact */}
+          {/* Legal & Support */}
           <div>
-            <h4 className="text-sm font-semibold text-white mb-4 uppercase tracking-wider">Support</h4>
+            <h4 className="text-sm font-semibold text-white mb-4 uppercase tracking-wider">Support & Legal</h4>
             <ul className="space-y-3 text-sm">
               <li>
-                <a href="#" className="text-gray-400 hover:text-white transition-colors duration-200 flex items-center space-x-2">
+                <a href="/terms" className="text-gray-400 hover:text-white transition-colors duration-200 flex items-center space-x-2">
+                  <FileText className="h-4 w-4" />
+                  <span>Terms of Service</span>
+                </a>
+              </li>
+              <li>
+                <a href="/privacy" className="text-gray-400 hover:text-white transition-colors duration-200 flex items-center space-x-2">
+                  <Shield className="h-4 w-4" />
+                  <span>Privacy Policy</span>
+                </a>
+              </li>
+              <li>
+                <a href="mailto:pdbaksh@gmail.com" className="text-gray-400 hover:text-white transition-colors duration-200 flex items-center space-x-2">
                   <Mail className="h-4 w-4" />
-                  <span>Contact Us</span>
-                </a>
-              </li>
-              <li>
-                <a href="#" className="text-gray-400 hover:text-white transition-colors duration-200">
-                  Documentation
-                </a>
-              </li>
-              <li>
-                <a href="#" className="text-gray-400 hover:text-white transition-colors duration-200">
-                  API Reference
+                  <span>Contact Support</span>
                 </a>
               </li>
             </ul>
@@ -81,11 +98,11 @@ const Footer = () => {
         <div className="mt-12 pt-8 border-t border-gray-800">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <p className="text-sm text-gray-400">
-              © 2025 ML Platform. All rights reserved.
+              © 2025 Peter Baksh. All rights reserved. Designed for educational purposes.
             </p>
             <div className="mt-4 md:mt-0">
-              <p className="text-xs text-gray-500">
-                ⚠️ For demonstration purposes only. Not for production use with sensitive data.
+              <p className="text-xs text-gray-500 text-center">
+                ⚠️ Educational Tool Only - Browser-Based Analysis - We Are Not Responsible For Decisions Made Using This Tool
               </p>
             </div>
           </div>
