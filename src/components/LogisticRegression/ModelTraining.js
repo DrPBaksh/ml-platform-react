@@ -383,44 +383,32 @@ const ModelTraining = ({ data, selectedColumns, onModelTrained, onNext, onPrevio
 
               {/* Regularisation Impact */}
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <h4 className="font-medium text-blue-900 mb-2">🎓 DA4 Learning: Regularisation Impact</h4>
-                <div className="text-blue-800 text-sm space-y-1">
-                  {regularisation === 'none' && (
-                    <>
-                      <p>• <strong>No constraints:</strong> Model learned freely from training data</p>
-                      <p>• <strong>Risk:</strong> May overfit if you have many features relative to data points</p>
-                      <p>• <strong>Benefit:</strong> Simple, interpretable approach perfect for learning</p>
-                    </>
-                  )}
-                  {regularisation === 'l1' && (
-                    <>
-                      <p>• <strong>Feature selection:</strong> {trainedModel.coefficients.filter(c => Math.abs(c.coefficient) < 0.01).length} features were effectively removed</p>
-                      <p>• <strong>Sparsity:</strong> Model focuses on most important predictors only</p>
-                      <p>• <strong>Benefit:</strong> Simpler, more interpretable model</p>
-                    </>
-                  )}
-                  {regularisation === 'l2' && (
-                    <>
-                      <p>• <strong>Balanced influence:</strong> All features contribute but none dominate</p>
-                      <p>• <strong>Stability:</strong> More stable predictions on new data</p>
-                      <p>• <strong>Benefit:</strong> Good generalisation whilst using all information</p>
-                    </>
-                  )}
-                </div>
+                <h4 className="font-medium text-blue-900 mb-2">
+                  🎓 DA4 Learning: Regularisation Impact
+                </h4>
+                <p className="text-blue-800 text-sm">
+                  {regularisation === 'none' ? 
+                    'No regularisation applied - the model learned freely from all features. This can lead to high training accuracy but may overfit.' :
+                    regularisation === 'l1' ?
+                    `L1 regularisation applied - this automatically selected the most important features and set ${trainedModel.coefficients.filter(c => Math.abs(c.coefficient) < 0.01).length} weak coefficients to zero.` :
+                    'L2 regularisation applied - this balanced the influence of all features and prevented any single feature from dominating the model.'
+                  }
+                </p>
               </div>
             </div>
           ) : (
             <div className="text-center py-12 text-gray-500">
               <Brain className="w-16 h-16 mx-auto mb-4 opacity-50" />
               <p>Click "Train Model" to start training</p>
-              <p className="text-sm text-gray-400 mt-2">
-                Choose your regularisation settings above, then train your model
+              <p className="text-sm mt-2">
+                Choose your regularisation approach and begin the training process
               </p>
             </div>
           )}
         </div>
       </div>
 
+      {/* Navigation */}
       <div className="flex justify-between max-w-6xl mx-auto">
         <button
           onClick={onPrevious}
