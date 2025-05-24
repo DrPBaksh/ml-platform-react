@@ -1,7 +1,13 @@
 import React from 'react';
 import { Heart, Shield, FileText, Mail, Globe, Lock } from 'lucide-react';
 
-const Footer = () => {
+const Footer = ({ onNavigate }) => {
+  const handleNavigate = (page) => {
+    if (onNavigate) {
+      onNavigate(page);
+    }
+  };
+
   return (
     <footer className="bg-gray-900 text-white py-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -28,7 +34,7 @@ const Footer = () => {
             </div>
             <p className="text-gray-400 text-sm leading-relaxed mb-4">
               The complete machine learning platform designed for UK DA4 (Level 4 Data Analyst) apprentices and data professionals. 
-              Master data analysis, visualization, and machine learning with our browser-based educational tool.
+              Master data analysis, visualisation, and machine learning with our browser-based educational tool.
             </p>
             <div className="space-y-2">
               <div className="flex items-center space-x-2 text-sm text-green-400">
@@ -53,7 +59,7 @@ const Footer = () => {
                 </p>
               </li>
               <li className="text-gray-300">• Statistical Analysis</li>
-              <li className="text-gray-300">• Data Visualization</li>
+              <li className="text-gray-300">• Data Visualisation</li>
               <li className="text-gray-300">• Machine Learning Basics</li>
               <li className="text-gray-300">• Business Intelligence</li>
               <li>
@@ -73,16 +79,31 @@ const Footer = () => {
             <h4 className="text-sm font-semibold text-white mb-4 uppercase tracking-wider">Support & Legal</h4>
             <ul className="space-y-3 text-sm">
               <li>
-                <a href="/terms" className="text-gray-400 hover:text-white transition-colors duration-200 flex items-center space-x-2">
+                <button 
+                  onClick={() => handleNavigate('terms')}
+                  className="text-gray-400 hover:text-white transition-colors duration-200 flex items-center space-x-2 cursor-pointer"
+                >
                   <FileText className="h-4 w-4" />
                   <span>Terms of Service</span>
-                </a>
+                </button>
               </li>
               <li>
-                <a href="/privacy" className="text-gray-400 hover:text-white transition-colors duration-200 flex items-center space-x-2">
+                <button 
+                  onClick={() => handleNavigate('privacy')}
+                  className="text-gray-400 hover:text-white transition-colors duration-200 flex items-center space-x-2 cursor-pointer"
+                >
                   <Shield className="h-4 w-4" />
                   <span>Privacy Policy</span>
-                </a>
+                </button>
+              </li>
+              <li>
+                <button 
+                  onClick={() => handleNavigate('about')}
+                  className="text-gray-400 hover:text-white transition-colors duration-200 flex items-center space-x-2 cursor-pointer"
+                >
+                  <FileText className="h-4 w-4" />
+                  <span>About</span>
+                </button>
               </li>
               <li>
                 <a href="mailto:pdbaksh@gmail.com" className="text-gray-400 hover:text-white transition-colors duration-200 flex items-center space-x-2">
