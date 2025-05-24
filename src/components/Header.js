@@ -17,20 +17,29 @@ const Header = ({ onBackToHome, showBackButton }) => {
               </button>
             )}
             <div className="flex items-center space-x-3">
-              <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-700 rounded-xl">
+              <img 
+                src="/logo.png" 
+                alt="ML Platform Logo" 
+                className="w-10 h-10 rounded-xl"
+                onError={(e) => {
+                  e.target.style.display = 'none';
+                  e.target.nextSibling.style.display = 'flex';
+                }}
+              />
+              <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-700 rounded-xl" style={{display: 'none'}}>
                 <Brain className="h-6 w-6 text-white" />
               </div>
               <div>
                 <h1 className="text-xl font-bold text-gray-900">ML Platform</h1>
-                <p className="text-xs text-gray-500">Machine Learning Made Simple</p>
+                <p className="text-xs text-gray-500">DA4 Apprenticeship Tool</p>
               </div>
             </div>
           </div>
           
           <div className="flex items-center space-x-4">
-            <div className="hidden sm:flex items-center space-x-2 px-3 py-1 bg-primary-50 rounded-full">
-              <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-              <span className="text-sm font-medium text-primary-700">Ready</span>
+            <div className="hidden sm:flex items-center space-x-2 px-3 py-1 bg-green-50 rounded-full">
+              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+              <span className="text-sm font-medium text-green-700">Secure & Private</span>
             </div>
           </div>
         </div>
