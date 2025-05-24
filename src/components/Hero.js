@@ -195,16 +195,6 @@ const Hero = ({ onAppSelect, onSkipToModel }) => {
             </div>
           ))}
         </div>
-
-        {/* DA4 Info Section */}
-        <div className="mt-12 bg-white/60 backdrop-blur-sm rounded-xl p-6 border border-white/20">
-          <h3 className="text-lg font-semibold text-gray-900 mb-3">About the UK Level 4 Data Analyst Apprenticeship</h3>
-          <p className="text-gray-600 text-sm leading-relaxed">
-            The DA4 apprenticeship is a 24-month programme that develops skills in data collection, analysis, and visualisation. 
-            Our platform provides hands-on experience with the tools and techniques you'll need to succeed, including statistical analysis, 
-            machine learning fundamentals, and business intelligence - all whilst keeping your data completely private and secure.
-          </p>
-        </div>
       </div>
     </div>
   );
