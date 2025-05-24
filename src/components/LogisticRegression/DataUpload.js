@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Upload, AlertCircle, CheckCircle, FileText, ArrowRight, Shield, Lock } from 'lucide-react';
+import { Upload, AlertCircle, CheckCircle, FileText, ArrowRight, Shield, Lock, Database, Sparkles } from 'lucide-react';
 import Papa from 'papaparse';
 import HelpTooltip from '../HelpTooltip';
 
@@ -9,6 +9,7 @@ const DataUpload = ({ onDataUploaded, onNext, data }) => {
   const [error, setError] = useState(null);
   const [validationWarnings, setValidationWarnings] = useState([]);
   const [fileInfo, setFileInfo] = useState(null);
+  const [loadingExample, setLoadingExample] = useState(false);
   const fileInputRef = useRef(null);
 
   const handleDrag = (e) => {
@@ -35,6 +36,57 @@ const DataUpload = ({ onDataUploaded, onNext, data }) => {
     e.preventDefault();
     if (e.target.files && e.target.files[0]) {
       handleFile(e.target.files[0]);
+    }
+  };
+
+  const loadIrisExample = async () => {
+    setLoadingExample(true);
+    setError(null);
+    setValidationWarnings([]);
+
+    try {
+      const response = await fetch('/iris.csv');
+      if (!response.ok) {
+        throw new Error('Failed to load Iris dataset');
+      }
+      
+      const csvText = await response.text();
+      
+      const result = await new Promise((resolve, reject) => {
+        Papa.parse(csvText, {
+          header: true,
+          skipEmptyLines: true,
+          dynamicTyping: false,
+          complete: resolve,
+          error: reject
+        });
+      });
+
+      if (result.errors.length > 0 && result.errors[0].type === 'Delimiter') {
+        setError('CSV parsing error. Please check the file format.');
+        return;
+      }
+
+      // Validate the Iris dataset
+      const validation = validateData(result);
+      setValidationWarnings(validation.warnings);
+
+      // Set file info for Iris dataset
+      setFileInfo({
+        name: 'Iris Dataset (Example)',
+        size: '5.0 KB',
+        lastModified: 'Classic ML Dataset',
+        ...validation.stats,
+        isExample: true
+      });
+
+      // Pass the data up
+      onDataUploaded(result);
+      
+    } catch (err) {
+      setError('Error loading Iris example dataset: ' + err.message);
+    } finally {
+      setLoadingExample(false);
     }
   };
 
@@ -137,7 +189,7 @@ const DataUpload = ({ onDataUploaded, onNext, data }) => {
         Papa.parse(file, {
           header: true,
           skipEmptyLines: true,
-          dynamicTyping: false, // Keep as strings initially for better validation
+          dynamicTyping: false,
           complete: resolve,
           error: reject
         });
@@ -166,7 +218,7 @@ const DataUpload = ({ onDataUploaded, onNext, data }) => {
       setFileInfo({
         name: file.name,
         size: (file.size / 1024).toFixed(1) + ' KB',
-        lastModified: new Date(file.lastModified).toLocaleDateString(),
+        lastModified: new Date(file.lastModified).toLocaleDateString('en-GB'),
         ...validation.stats
       });
 
@@ -229,8 +281,57 @@ const DataUpload = ({ onDataUploaded, onNext, data }) => {
         </div>
       </div>
 
-      {/* Upload Area */}
+      {/* Example Dataset Option */}
       <div className="max-w-4xl mx-auto">
+        <div className="card bg-blue-50 border-blue-200 mb-6">
+          <div className="flex items-center space-x-3 mb-4">
+            <Database className="w-6 h-6 text-blue-600" />
+            <h3 className="font-semibold text-blue-900">Try with Example Data</h3>
+            <HelpTooltip 
+              title="Iris Dataset - Perfect for Learning" 
+              level="beginner"
+              content={
+                <div className="space-y-3">
+                  <p><strong>The Iris Dataset:</strong> A classic machine learning dataset perfect for beginners!</p>
+                  <p><strong>What's included:</strong></p>
+                  <ul className="space-y-1 text-sm">
+                    <li>• <strong>150 records:</strong> Perfect size for learning</li>
+                    <li>• <strong>4 numeric features:</strong> Sepal/Petal measurements</li>
+                    <li>• <strong>3 species:</strong> Setosa, Versicolor, Virginica</li>
+                    <li>• <strong>Clean data:</strong> No missing values</li>
+                  </ul>
+                  <div className="bg-green-50 p-3 rounded-lg">
+                    <p className="text-green-800 font-medium">🌸 Perfect for learning classification techniques!</p>
+                  </div>
+                </div>
+              }
+            />
+          </div>
+          <p className="text-blue-800 text-sm mb-4">
+            New to machine learning? Start with the famous Iris dataset - perfect for learning classification!
+          </p>
+          <button
+            onClick={loadIrisExample}
+            disabled={loadingExample}
+            className={`btn-primary flex items-center space-x-2 ${
+              loadingExample ? 'opacity-50 cursor-not-allowed' : ''
+            }`}
+          >
+            {loadingExample ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                <span>Loading Iris Dataset...</span>
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-4 h-4" />
+                <span>Use Iris Example Dataset</span>
+              </>
+            )}
+          </button>
+        </div>
+
+        {/* Upload Area */}
         <div
           className={`relative border-2 border-dashed rounded-xl p-12 text-center transition-all duration-200 ${
             dragActive
@@ -302,6 +403,11 @@ const DataUpload = ({ onDataUploaded, onNext, data }) => {
             <div className="flex items-center space-x-3 mb-4">
               <FileText className="w-6 h-6 text-primary-600" />
               <h3 className="text-lg font-semibold text-gray-900">Dataset Overview</h3>
+              {fileInfo.isExample && (
+                <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full font-medium">
+                  Example Dataset
+                </span>
+              )}
               <HelpTooltip 
                 title="Understanding Your Dataset" 
                 level="beginner"
@@ -312,7 +418,7 @@ const DataUpload = ({ onDataUploaded, onNext, data }) => {
                       <li>• <strong>Rows:</strong> Number of observations/records</li>
                       <li>• <strong>Columns:</strong> Number of variables/features</li>
                       <li>• <strong>Numeric:</strong> Columns with numbers (age, price, etc.)</li>
-                      <li>• <strong>Categorical:</strong> Columns with categories (color, type, etc.)</li>
+                      <li>• <strong>Categorical:</strong> Columns with categories (colour, type, etc.)</li>
                     </ul>
                     <p className="text-blue-800 text-sm bg-blue-50 p-2 rounded mt-2">
                       💡 <strong>DA4 Tip:</strong> Understanding your data structure is the first step in any analysis!
@@ -368,7 +474,7 @@ const DataUpload = ({ onDataUploaded, onNext, data }) => {
                   <div className="space-y-2">
                     <p><strong>Why data quality matters:</strong></p>
                     <ul className="space-y-1 text-sm">
-                      <li>• <strong>Garbage in, garbage out</strong> - Poor data = poor models</li>
+                      <li>• <strong>Rubbish in, rubbish out</strong> - Poor data = poor models</li>
                       <li>• <strong>Missing data</strong> can bias results</li>
                       <li>• <strong>Inconsistent data</strong> reduces model accuracy</li>
                       <li>• <strong>Too few rows</strong> makes patterns unreliable</li>
