@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react';
-import { Upload, FileText, AlertTriangle, CheckCircle, X } from 'lucide-react';
+import { Upload, FileText, AlertTriangle, CheckCircle, X, Database, Shield } from 'lucide-react';
 import Papa from 'papaparse';
+import HelpTooltip from '../HelpTooltip';
 
 const DataUpload = ({ onDataUploaded, onNext, data }) => {
   const [isDragOver, setIsDragOver] = useState(false);
@@ -145,10 +146,32 @@ const DataUpload = ({ onDataUploaded, onNext, data }) => {
   return (
     <div className="space-y-6">
       <div className="text-center">
-        <h1 className="text-3xl font-bold text-gray-900 mb-4">Upload Your Data</h1>
+        <div className="flex items-center justify-center space-x-3 mb-4">
+          <h1 className="text-3xl font-bold text-gray-900">Upload Your Data</h1>
+          <HelpTooltip 
+            title="Data Upload - DA4 Learning" 
+            level="beginner"
+            content={
+              <div className="space-y-3">
+                <p><strong>What you're learning:</strong> Data import and validation - a core DA4 skill.</p>
+                <p><strong>CSV Format:</strong> Comma-Separated Values files are the most common format for data analysis. Each row represents a record, and columns represent variables.</p>
+                <p><strong>Data Quality:</strong> We automatically check for missing values, unusual patterns, and data types to help you understand your dataset quality.</p>
+                <div className="bg-green-50 p-3 rounded-lg mt-3">
+                  <p className="text-green-800 font-medium">💡 DA4 Tip: Always inspect your data before analysis!</p>
+                </div>
+              </div>
+            }
+          />
+        </div>
         <p className="text-lg text-gray-600 max-w-2xl mx-auto">
           Start by uploading a CSV file containing your data. We'll analyze it and guide you through the process.
         </p>
+        
+        {/* Privacy Notice */}
+        <div className="flex items-center justify-center space-x-2 mt-4 px-4 py-2 bg-green-50 rounded-full border border-green-200 inline-flex">
+          <Shield className="h-4 w-4 text-green-600" />
+          <span className="text-sm font-medium text-green-700">Your data stays in your browser - 100% private</span>
+        </div>
       </div>
 
       {/* Upload Area */}
@@ -169,6 +192,7 @@ const DataUpload = ({ onDataUploaded, onNext, data }) => {
             <div className="space-y-4">
               <div className="animate-spin w-12 h-12 border-4 border-primary-200 border-t-primary-600 rounded-full mx-auto"></div>
               <p className="text-gray-600">Processing your file...</p>
+              <p className="text-sm text-gray-500">Parsing CSV and checking data quality</p>
             </div>
           ) : data ? (
             <div className="space-y-4">
@@ -178,6 +202,9 @@ const DataUpload = ({ onDataUploaded, onNext, data }) => {
                 <p className="text-green-600">
                   {data.data.length} rows, {data.meta.fields.length} columns
                 </p>
+                <p className="text-sm text-gray-600 mt-2">
+                  Ready for DA4 statistical analysis
+                </p>
               </div>
             </div>
           ) : (
@@ -186,6 +213,7 @@ const DataUpload = ({ onDataUploaded, onNext, data }) => {
               <div>
                 <h3 className="text-lg font-semibold text-gray-900">Drop your CSV file here</h3>
                 <p className="text-gray-600">or click to browse</p>
+                <p className="text-sm text-gray-500 mt-2">Perfect for DA4 apprenticeship datasets</p>
               </div>
               <input
                 type="file"
@@ -222,9 +250,25 @@ const DataUpload = ({ onDataUploaded, onNext, data }) => {
       {warnings.length > 0 && (
         <div className="card max-w-2xl mx-auto bg-yellow-50 border-yellow-200">
           <div className="flex items-start space-x-3">
-            <AlertTriangle className="w-5 h-5 text-yellow-500 mt-0.5" />
+            <div className="flex items-center space-x-2">
+              <AlertTriangle className="w-5 h-5 text-yellow-500 mt-0.5" />
+              <HelpTooltip 
+                title="Data Quality Warnings - What They Mean" 
+                level="intermediate"
+                content={
+                  <div className="space-y-3">
+                    <p><strong>Missing Values:</strong> Some cells in your data are empty. This is common in real-world data and we'll help you handle it.</p>
+                    <p><strong>High Cardinality:</strong> A column has too many unique values to be useful as a categorical predictor.</p>
+                    <p><strong>No Variation:</strong> All values in a column are the same, so it won't help predict anything.</p>
+                    <div className="bg-blue-50 p-3 rounded-lg mt-3">
+                      <p className="text-blue-800 font-medium">🎓 DA4 Skill: Learning to identify and handle data quality issues is essential for any data analyst!</p>
+                    </div>
+                  </div>
+                }
+              />
+            </div>
             <div className="flex-1">
-              <h3 className="text-sm font-medium text-yellow-800">Data Quality Warnings</h3>
+              <h3 className="text-sm font-medium text-yellow-800">Data Quality Insights</h3>
               <div className="mt-2 space-y-2">
                 {warnings.map((warning, index) => (
                   <div key={index} className="text-sm text-yellow-700">
@@ -247,7 +291,23 @@ const DataUpload = ({ onDataUploaded, onNext, data }) => {
       {/* Data Preview */}
       {data && (
         <div className="card max-w-6xl mx-auto">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Data Preview</h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-900">Data Preview</h3>
+            <HelpTooltip 
+              title="Understanding Your Data Structure" 
+              level="beginner"
+              content={
+                <div className="space-y-3">
+                  <p><strong>Rows:</strong> Each row represents one observation or data point (like one customer, one sale, one survey response).</p>
+                  <p><strong>Columns:</strong> Each column represents a variable or feature (like age, price, rating).</p>
+                  <p><strong>Data Types:</strong> Numbers can be used for calculations, while text is typically used for categories.</p>
+                  <div className="bg-purple-50 p-3 rounded-lg mt-3">
+                    <p className="text-purple-800 font-medium">📊 This preview shows the first 5 rows to help you understand your data structure.</p>
+                  </div>
+                </div>
+              }
+            />
+          </div>
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
