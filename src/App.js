@@ -6,7 +6,6 @@ import LogisticRegressionApp from './components/LogisticRegressionApp';
 import Terms from './components/Terms';
 import Privacy from './components/Privacy';
 import About from './components/About';
-import './App.css';
 
 function App() {
   const [currentView, setCurrentView] = useState('home');
