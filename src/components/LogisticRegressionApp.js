@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import DataUpload from './LogisticRegression/DataUpload';
 import ColumnSelection from './LogisticRegression/ColumnSelection';
-import CorrelationAnalysis from './LogisticRegression/CorrelationAnalysis';
 import TrainTestSplit from './LogisticRegression/TrainTestSplit';
+import CorrelationAnalysis from './LogisticRegression/CorrelationAnalysis';
 import ExploratoryDataAnalysis from './LogisticRegression/ExploratoryDataAnalysis';
 import Preprocessing from './LogisticRegression/Preprocessing';
 import ModelTraining from './LogisticRegression/ModelTraining';
@@ -16,18 +16,20 @@ const LogisticRegressionApp = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [data, setData] = useState(null);
   const [selectedColumns, setSelectedColumns] = useState({ predictors: [], target: '' });
-  const [correlationResults, setCorrelationResults] = useState(null);
   const [splitData, setSplitData] = useState(null);
+  const [correlationResults, setCorrelationResults] = useState(null);
   const [edaResults, setEdaResults] = useState(null);
+  const [edaDecisions, setEdaDecisions] = useState([]);
   const [preprocessedData, setPreprocessedData] = useState(null);
   const [model, setModel] = useState(null);
   const [evaluation, setEvaluation] = useState(null);
 
+  // CORRECTED WORKFLOW ORDER: Column Selection → Train/Test Split → Correlation → EDA → Preprocessing → Training
   const steps = [
     { id: 1, name: 'Upload Data', description: 'Upload your CSV file' },
     { id: 2, name: 'Select Columns', description: 'Choose predictors and target' },
-    { id: 3, name: 'Correlation Analysis', description: 'Check variable relationships' },
-    { id: 4, name: 'Train/Test Split', description: 'Split data for validation' },
+    { id: 3, name: 'Train/Test Split', description: 'Split data for validation' },
+    { id: 4, name: 'Correlation Analysis', description: 'Check variable relationships' },
     { id: 5, name: 'Explore Data', description: 'Analyze data patterns' },
     { id: 6, name: 'Preprocessing', description: 'Clean and prepare data' },
     { id: 7, name: 'Train Model', description: 'Train logistic regression' },
@@ -57,8 +59,8 @@ const LogisticRegressionApp = () => {
     switch (stepId) {
       case 2: return data !== null;
       case 3: return selectedColumns.predictors.length > 0 && selectedColumns.target;
-      case 4: return selectedColumns.predictors.length > 0 && selectedColumns.target;
-      case 5: return splitData !== null;
+      case 4: return splitData !== null;
+      case 5: return selectedColumns.predictors.length > 0 && selectedColumns.target;
       case 6: return edaResults !== null;
       case 7: return preprocessedData !== null;
       case 8: return model !== null;
@@ -70,9 +72,10 @@ const LogisticRegressionApp = () => {
   const handleColumnsRevised = (newColumns) => {
     setSelectedColumns(newColumns);
     // Reset dependent states when columns change
-    setCorrelationResults(null);
     setSplitData(null);
+    setCorrelationResults(null);
     setEdaResults(null);
+    setEdaDecisions([]);
     setPreprocessedData(null);
     setModel(null);
     setEvaluation(null);
@@ -80,8 +83,11 @@ const LogisticRegressionApp = () => {
 
   const handleModelLoad = (loadedModel) => {
     setModel(loadedModel);
-    // You might want to also reset evaluation when a new model is loaded
     setEvaluation(null);
+  };
+
+  const handleEDADecisions = (decisions) => {
+    setEdaDecisions(prev => [...prev, ...decisions]);
   };
 
   const renderCurrentStep = () => {
@@ -106,6 +112,17 @@ const LogisticRegressionApp = () => {
         );
       case 3:
         return (
+          <TrainTestSplit
+            data={data}
+            selectedColumns={selectedColumns}
+            onSplitComplete={setSplitData}
+            onNext={handleNext}
+            onPrevious={handlePrevious}
+            splitData={splitData}
+          />
+        );
+      case 4:
+        return (
           <CorrelationAnalysis
             data={data}
             selectedColumns={selectedColumns}
@@ -115,22 +132,13 @@ const LogisticRegressionApp = () => {
             onPrevious={handlePrevious}
           />
         );
-      case 4:
-        return (
-          <TrainTestSplit
-            data={data}
-            onSplitComplete={setSplitData}
-            onNext={handleNext}
-            onPrevious={handlePrevious}
-            splitData={splitData}
-          />
-        );
       case 5:
         return (
           <ExploratoryDataAnalysis
             data={data}
             selectedColumns={selectedColumns}
             onEdaComplete={setEdaResults}
+            onDecisionsMade={handleEDADecisions}
             onColumnsRevised={handleColumnsRevised}
             onNext={handleNext}
             onPrevious={handlePrevious}
@@ -140,7 +148,7 @@ const LogisticRegressionApp = () => {
       case 6:
         return (
           <Preprocessing
-            data={data}
+            data={splitData}
             selectedColumns={selectedColumns}
             onPreprocessingComplete={setPreprocessedData}
             onNext={handleNext}
@@ -152,6 +160,7 @@ const LogisticRegressionApp = () => {
         return (
           <ModelTraining
             data={splitData}
+            preprocessedData={preprocessedData}
             selectedColumns={selectedColumns}
             onModelTrained={setModel}
             onNext={handleNext}
@@ -216,9 +225,11 @@ const LogisticRegressionApp = () => {
             <PDFReportGenerator
               data={data}
               selectedColumns={selectedColumns}
-              edaResults={edaResults}
-              preprocessingResults={preprocessedData}
               splitData={splitData}
+              correlationResults={correlationResults}
+              edaResults={edaResults}
+              edaDecisions={edaDecisions}
+              preprocessingResults={preprocessedData}
               model={model}
               evaluation={evaluation}
             />
