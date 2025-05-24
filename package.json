@@ -1,1 +1,50 @@
-{\n  \"name\": \"ml-platform-react\",\n  \"version\": \"1.0.0\",\n  \"description\": \"World-class machine learning web application platform\",\n  \"private\": true,\n  \"dependencies\": {\n    \"@testing-library/jest-dom\": \"^5.16.4\",\n    \"@testing-library/react\": \"^13.3.0\",\n    \"@testing-library/user-event\": \"^13.5.0\",\n    \"lucide-react\": \"^0.263.1\",\n    \"papaparse\": \"^5.4.1\",\n    \"react\": \"^18.2.0\",\n    \"react-dom\": \"^18.2.0\",\n    \"react-scripts\": \"5.0.1\",\n    \"recharts\": \"^2.6.2\",\n    \"web-vitals\": \"^2.1.4\",\n    \"mathjs\": \"^11.9.1\",\n    \"lodash\": \"^4.17.21\"\n  },\n  \"scripts\": {\n    \"start\": \"react-scripts start\",\n    \"build\": \"react-scripts build\",\n    \"test\": \"react-scripts test\",\n    \"eject\": \"react-scripts eject\"\n  },\n  \"eslintConfig\": {\n    \"extends\": [\n      \"react-app\",\n      \"react-app/jest\"\n    ]\n  },\n  \"browserslist\": {\n    \"production\": [\n      \">0.2%\",\n      \"not dead\",\n      \"not op_mini all\"\n    ],\n    \"development\": [\n      \"last 1 chrome version\",\n      \"last 1 firefox version\",\n      \"last 1 safari version\"\n    ]\n  },\n  \"devDependencies\": {\n    \"autoprefixer\": \"^10.4.14\",\n    \"postcss\": \"^8.4.24\",\n    \"tailwindcss\": \"^3.3.2\"\n  },\n  \"homepage\": \".\"\n}"
+{
+  "name": "ml-platform-react",
+  "version": "1.0.0",
+  "description": "World-class machine learning web application platform",
+  "private": true,
+  "dependencies": {
+    "@testing-library/jest-dom": "^5.16.4",
+    "@testing-library/react": "^13.3.0",
+    "@testing-library/user-event": "^13.5.0",
+    "lucide-react": "^0.263.1",
+    "papaparse": "^5.4.1",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-scripts": "5.0.1",
+    "recharts": "^2.6.2",
+    "web-vitals": "^2.1.4",
+    "mathjs": "^11.9.1",
+    "lodash": "^4.17.21"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject"
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ]
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.4.14",
+    "postcss": "^8.4.24",
+    "tailwindcss": "^3.3.2"
+  },
+  "homepage": "."
+}
