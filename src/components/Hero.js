@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { ChevronDown, Sparkles, BarChart3, TrendingUp, Zap, Lock, GraduationCap } from 'lucide-react';
+import { ChevronDown, Sparkles, BarChart3, TrendingUp, Zap, Lock, GraduationCap, Upload } from 'lucide-react';
 
-const Hero = ({ onAppSelect }) => {
+const Hero = ({ onAppSelect, onSkipToModel }) => {
   const [selectedApp, setSelectedApp] = useState('');
 
   const apps = [
@@ -21,7 +21,7 @@ const Hero = ({ onAppSelect }) => {
       icon: TrendingUp,
       color: 'from-green-500 to-green-700',
       available: false,
-      da4Skills: ['Predictive Modeling', 'Correlation Analysis']
+      da4Skills: ['Predictive Modelling', 'Correlation Analysis']
     },
     {
       id: 'time-series',
@@ -37,6 +37,12 @@ const Hero = ({ onAppSelect }) => {
   const handleGetStarted = () => {
     if (selectedApp) {
       onAppSelect(selectedApp);
+    }
+  };
+
+  const handleSkipToModel = () => {
+    if (selectedApp) {
+      onSkipToModel(selectedApp);
     }
   };
 
@@ -61,7 +67,7 @@ const Hero = ({ onAppSelect }) => {
           
           <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto leading-relaxed">
             The complete machine learning platform designed for UK Level 4 Data Analyst apprentices. 
-            Master statistical analysis, data visualization, and predictive modeling with our interactive, browser-based tools.
+            Master statistical analysis, data visualisation, and predictive modelling with our interactive, browser-based tools.
           </p>
 
           {/* Privacy & DA4 Badges */}
@@ -128,15 +134,38 @@ const Hero = ({ onAppSelect }) => {
               })}
             </div>
             
-            <button
-              onClick={handleGetStarted}
-              disabled={!selectedApp}
-              className={`btn-primary text-lg px-8 py-4 ${
-                !selectedApp ? 'opacity-50 cursor-not-allowed' : ''
-              }`}
-            >
-              Start Learning with {selectedApp ? apps.find(app => app.id === selectedApp)?.name : 'Selected Module'}
-            </button>
+            {/* Action Buttons */}
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <button
+                onClick={handleGetStarted}
+                disabled={!selectedApp}
+                className={`btn-primary text-lg px-8 py-4 ${
+                  !selectedApp ? 'opacity-50 cursor-not-allowed' : ''
+                }`}
+              >
+                Start Learning with {selectedApp ? apps.find(app => app.id === selectedApp)?.name : 'Selected Module'}
+              </button>
+              
+              <button
+                onClick={handleSkipToModel}
+                disabled={!selectedApp}
+                className={`btn-secondary text-lg px-8 py-4 flex items-center space-x-2 ${
+                  !selectedApp ? 'opacity-50 cursor-not-allowed' : ''
+                }`}
+              >
+                <Upload className="w-4 h-4" />
+                <span>Skip Training & Load Pre-trained Model</span>
+              </button>
+            </div>
+            
+            {selectedApp && (
+              <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-blue-800 text-sm">
+                  <strong>Two learning paths:</strong> Start from scratch to build foundational skills, 
+                  or load a pre-trained model to explore advanced evaluation and prediction techniques.
+                </p>
+              </div>
+            )}
           </div>
         </div>
 
@@ -145,7 +174,7 @@ const Hero = ({ onAppSelect }) => {
           {[
             {
               title: 'DA4 Curriculum Aligned',
-              description: 'Covers Level 4 Data Analyst apprenticeship standards including statistical analysis, data visualization, and business intelligence',
+              description: 'Covers Level 4 Data Analyst apprenticeship standards including statistical analysis, data visualisation, and business intelligence',
               icon: '🎓'
             },
             {
@@ -171,9 +200,9 @@ const Hero = ({ onAppSelect }) => {
         <div className="mt-12 bg-white/60 backdrop-blur-sm rounded-xl p-6 border border-white/20">
           <h3 className="text-lg font-semibold text-gray-900 mb-3">About the UK Level 4 Data Analyst Apprenticeship</h3>
           <p className="text-gray-600 text-sm leading-relaxed">
-            The DA4 apprenticeship is a 24-month program that develops skills in data collection, analysis, and visualization. 
+            The DA4 apprenticeship is a 24-month programme that develops skills in data collection, analysis, and visualisation. 
             Our platform provides hands-on experience with the tools and techniques you'll need to succeed, including statistical analysis, 
-            machine learning fundamentals, and business intelligence - all while keeping your data completely private and secure.
+            machine learning fundamentals, and business intelligence - all whilst keeping your data completely private and secure.
           </p>
         </div>
       </div>
