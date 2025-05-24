@@ -139,7 +139,6 @@ const ExploratoryDataAnalysis = ({ data, selectedColumns, onEdaComplete, onColum
 
   const handleRevisionSave = () => {
     onColumnsRevised(revisedColumns);
-    setSelectedColumns(revisedColumns);
     setShowRevision(false);
     performAnalysis();
   };
