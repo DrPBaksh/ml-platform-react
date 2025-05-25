@@ -54,6 +54,25 @@ const ModelTraining = ({ data, preprocessedData, selectedColumns, onModelTrained
     }
   };
 
+  const extractRealCoefficients = (logisticModel, featureNames) => {
+    // Extract real coefficients from the trained ml.js model
+    if (logisticModel.weights && logisticModel.weights.length > 0) {
+      return featureNames.map((feature, idx) => ({
+        feature: feature,
+        coefficient: logisticModel.weights[idx] || 0
+      }));
+    } else if (logisticModel.theta && logisticModel.theta.length > 0) {
+      // Some versions of ml-logistic-regression use theta instead of weights
+      return featureNames.map((feature, idx) => ({
+        feature: feature,
+        coefficient: logisticModel.theta[idx] || 0
+      }));
+    } else {
+      // If no coefficients are available, throw an error - no fake fallbacks
+      throw new Error('Unable to extract real coefficients from trained model. Model may not have converged properly.');
+    }
+  };
+
   const trainModel = async () => {
     setTraining(true);
     setTrainingProgress(0);
@@ -78,16 +97,27 @@ const ModelTraining = ({ data, preprocessedData, selectedColumns, onModelTrained
       await new Promise(resolve => setTimeout(resolve, 500));
       logisticModel.train(X, y);
       
-      setTrainingProgress(80);
+      setTrainingProgress(60);
       setTrainingLog(prev => [...prev, '🧠 Model training completed!']);
+
+      // Validate model was properly trained
+      if (!logisticModel.weights && !logisticModel.theta) {
+        throw new Error('Model training failed - no coefficients were learned. Check your data quality and parameters.');
+      }
 
       const predictions = logisticModel.predict(X);
       const accuracy = predictions.reduce((acc, pred, idx) => {
         return acc + (Math.round(pred) === y.get(idx, 0) ? 1 : 0);
       }, 0) / predictions.length;
 
-      setTrainingProgress(100);
+      setTrainingProgress(80);
       setTrainingLog(prev => [...prev, `✅ Training accuracy: ${(accuracy * 100).toFixed(2)}%`]);
+
+      // Extract ONLY real coefficients - no fake fallbacks
+      const realCoefficients = extractRealCoefficients(logisticModel, selectedColumns.predictors);
+      
+      setTrainingProgress(90);
+      setTrainingLog(prev => [...prev, `🔍 Extracted ${realCoefficients.length} real coefficients`]);
 
       const modelData = {
         model: logisticModel,
@@ -102,19 +132,21 @@ const ModelTraining = ({ data, preprocessedData, selectedColumns, onModelTrained
           iterations: parameters.maxIterations,
           convergence: true
         },
-        coefficients: selectedColumns.predictors.map((feature, idx) => ({
-          feature: feature,
-          coefficient: logisticModel.weights ? logisticModel.weights[idx] || 0 : Math.random() * 2 - 1
-        }))
+        coefficients: realCoefficients,
+        // Store raw model data for full functionality
+        rawWeights: logisticModel.weights || logisticModel.theta,
+        intercept: logisticModel.intercept || 0
       };
 
+      setTrainingProgress(100);
       setTrainedModel(modelData);
       onModelTrained(modelData, parameters);
-      setTrainingLog(prev => [...prev, '🎉 Model ready for evaluation!']);
+      setTrainingLog(prev => [...prev, '🎉 Model ready with REAL coefficients for evaluation!']);
 
     } catch (error) {
       console.error('Training error:', error);
       setTrainingLog(prev => [...prev, `❌ Training failed: ${error.message}`]);
+      setTrainingLog(prev => [...prev, `💡 Suggestion: Check data quality, try different parameters, or ensure sufficient data samples.`]);
     } finally {
       setTraining(false);
     }
@@ -255,10 +287,10 @@ const ModelTraining = ({ data, preprocessedData, selectedColumns, onModelTrained
             </div>
           </div>
 
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <p className="text-blue-800 text-sm">
-              <strong>✨ Real ML Power:</strong> This model was trained using actual logistic regression algorithms from ml.js, 
-              not mock data. It can make real predictions on new data!
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+            <p className="text-green-800 text-sm">
+              <strong>✨ 100% Real ML Power:</strong> This model was trained using actual logistic regression algorithms from ml.js. 
+              All coefficients are real - no fake data! The model can make genuine predictions on new data.
             </p>
           </div>
         </div>
