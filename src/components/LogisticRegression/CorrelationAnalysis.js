@@ -86,16 +86,29 @@ const CorrelationAnalysis = ({ data, selectedColumns, onNext, onPrevious, onColu
   };
 
   const generateScatterData = () => {
-    // Get the data pairs and sort them by X-axis variable for better visualization
-    const pairs = data.data
-      .map(row => ({
+    // Get clean numeric data pairs
+    const rawPairs = data.data
+      .map((row, index) => ({
         x: parseFloat(row[selectedPredictor1]),
-        y: parseFloat(row[selectedPredictor2])
+        y: parseFloat(row[selectedPredictor2]),
+        originalIndex: index
       }))
-      .filter(point => !isNaN(point.x) && !isNaN(point.y))
-      .sort((a, b) => a.x - b.x); // Sort by X-axis for cleaner visualization
+      .filter(point => !isNaN(point.x) && !isNaN(point.y));
+
+    // Sort by X-axis values for better visualization
+    const sortedPairs = rawPairs.sort((a, b) => a.x - b.x);
+
+    // Ensure we have clean data for the scatter plot
+    const cleanData = sortedPairs.map((point, index) => ({
+      x: Number(point.x.toFixed(3)), // Round to 3 decimal places for cleaner display
+      y: Number(point.y.toFixed(3)),
+      id: point.originalIndex // Keep track of original data row
+    }));
     
-    setScatterData(pairs);
+    console.log(`Generated ${cleanData.length} data points for scatter plot`);
+    console.log('Sample data points:', cleanData.slice(0, 5));
+    
+    setScatterData(cleanData);
   };
 
   const removeHighlyCorrelatedVariable = (pred1, pred2) => {
@@ -140,6 +153,21 @@ const CorrelationAnalysis = ({ data, selectedColumns, onNext, onPrevious, onColu
     const values = data.data.map(row => parseFloat(row[pred])).filter(v => !isNaN(v));
     return values.length > data.data.length * 0.7;
   });
+
+  // Enhanced custom tooltip for scatter plot
+  const CustomTooltip = ({ active, payload }) => {
+    if (active && payload && payload.length) {
+      const data = payload[0].payload;
+      return (
+        <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg">
+          <p className="font-medium text-gray-900">{selectedPredictor1}: {data.x}</p>
+          <p className="font-medium text-gray-900">{selectedPredictor2}: {data.y}</p>
+          <p className="text-sm text-gray-600">Data Point #{data.id + 1}</p>
+        </div>
+      );
+    }
+    return null;
+  };
 
   return (
     <div className="space-y-6">
@@ -295,7 +323,7 @@ const CorrelationAnalysis = ({ data, selectedColumns, onNext, onPrevious, onColu
           {/* Scatter Plot */}
           <div className="card max-w-4xl mx-auto">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-semibold text-gray-900">Variable Relationship Visualisation</h2>
+              <h2 className="text-xl font-semibold text-gray-900">Variable Relationship Visualization</h2>
               <HelpTooltip 
                 title="Interpreting Scatter Plots" 
                 level="beginner"
@@ -355,14 +383,41 @@ const CorrelationAnalysis = ({ data, selectedColumns, onNext, onPrevious, onColu
 
             {scatterData.length > 0 && selectedPredictor1 !== selectedPredictor2 && (
               <>
-                <div className="h-64 mb-4">
+                {/* Data Information */}
+                <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <div className="flex items-center space-x-2">
+                    <Info className="w-4 h-4 text-blue-600" />
+                    <p className="text-blue-800 text-sm">
+                      Displaying {scatterData.length} data points (sorted by {selectedPredictor1} for better visualization)
+                    </p>
+                  </div>
+                </div>
+
+                <div className="h-80 mb-4">
                   <ResponsiveContainer width="100%" height="100%">
-                    <ScatterChart data={scatterData}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="x" name={selectedPredictor1} />
-                      <YAxis dataKey="y" name={selectedPredictor2} />
-                      <Tooltip cursor={{ strokeDasharray: '3 3' }} />
-                      <Scatter fill="#0ea5e9" />
+                    <ScatterChart data={scatterData} margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                      <XAxis 
+                        dataKey="x" 
+                        name={selectedPredictor1}
+                        type="number"
+                        domain={['dataMin', 'dataMax']}
+                        tickFormatter={(value) => value.toFixed(1)}
+                      />
+                      <YAxis 
+                        dataKey="y" 
+                        name={selectedPredictor2}
+                        type="number"
+                        domain={['dataMin', 'dataMax']}
+                        tickFormatter={(value) => value.toFixed(1)}
+                      />
+                      <Tooltip content={<CustomTooltip />} />
+                      <Scatter 
+                        fill="#0ea5e9" 
+                        fillOpacity={0.7}
+                        stroke="#0284c7"
+                        strokeWidth={1}
+                      />
                     </ScatterChart>
                   </ResponsiveContainer>
                 </div>
