@@ -80,8 +80,8 @@ const DataUpload = ({ onDataUploaded, onNext, data }) => {
         isExample: true
       });
 
-      // Pass the data up
-      onDataUploaded(result);
+      // Pass the data up with filename
+      onDataUploaded(result, 'iris_dataset');
       
     } catch (err) {
       setError('Error loading Iris example dataset: ' + err.message);
@@ -222,8 +222,9 @@ const DataUpload = ({ onDataUploaded, onNext, data }) => {
         ...validation.stats
       });
 
-      // Pass the data up
-      onDataUploaded(result);
+      // Pass the data up with filename (without extension)
+      const fileName = file.name.replace('.csv', '');
+      onDataUploaded(result, fileName);
       
     } catch (err) {
       setError('Error reading the CSV file: ' + err.message);
