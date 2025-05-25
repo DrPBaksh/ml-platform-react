@@ -59,11 +59,23 @@ const LogisticRegressionApp = () => {
     }
   };
 
-  // Function to skip training and go directly to evaluation with loaded model
-  const handleSkipToEvaluation = () => {
-    if (model && splitData) {
-      setCurrentStep(8); // Go to Model Evaluation step
-    }
+  // Function to skip directly to evaluation with loaded model
+  const handleSkipToEvaluationWithModel = (loadedModel, generatedSplitData, modelColumns) => {
+    // Set all the necessary state for evaluation
+    setModel(loadedModel);
+    setSplitData(generatedSplitData);
+    setSelectedColumns(modelColumns);
+    
+    // Set some default parameters for the skipped steps
+    setSplitParameters({
+      splitRatio: 0.8,
+      stratify: false,
+      randomSeed: 42,
+      splitMethod: 'random'
+    });
+    
+    // Jump directly to Model Evaluation (step 8)
+    setCurrentStep(8);
   };
 
   const canProceedToStep = (stepId) => {
@@ -145,6 +157,7 @@ const LogisticRegressionApp = () => {
             onDataUploaded={handleDataUploaded}
             onNext={handleNext}
             data={data}
+            onSkipToEvaluationWithModel={handleSkipToEvaluationWithModel}
           />
         );
       case 2:
@@ -165,7 +178,6 @@ const LogisticRegressionApp = () => {
             onSplitComplete={handleSplitComplete}
             onNext={handleNext}
             onPrevious={handlePrevious}
-            onSkipToEvaluation={handleSkipToEvaluation}
             splitData={splitData}
             model={model}
           />
