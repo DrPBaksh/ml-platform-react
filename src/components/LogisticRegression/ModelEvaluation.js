@@ -19,6 +19,7 @@ const ModelEvaluation = ({
 }) => {
   const [metrics, setMetrics] = useState(null);
   const [confusionMatrix, setConfusionMatrix] = useState(null);
+  const [categoryConfusionMatrix, setCategoryConfusionMatrix] = useState(null);
   const [showPythonPrompt, setShowPythonPrompt] = useState(false);
   const [copied, setCopied] = useState(false);
   const [evaluationError, setEvaluationError] = useState(null);
@@ -28,6 +29,26 @@ const ModelEvaluation = ({
       performRealEvaluation();
     }
   }, [model, data]);
+
+  // Get actual category names from the training data
+  const getCategoryNames = () => {
+    if (!data?.trainData || !selectedColumns?.target) return ['Class 0', 'Class 1'];
+    
+    const uniqueValues = [...new Set(data.trainData.map(row => row[selectedColumns.target]))];
+    
+    // If string values, return them directly
+    if (typeof uniqueValues[0] === 'string') {
+      return uniqueValues.sort();
+    }
+    
+    // If numeric, check if we have targetClasses mapping
+    if (model?.targetClasses && model.targetClasses.length > 0) {
+      return model.targetClasses;
+    }
+    
+    // Default to generic names
+    return uniqueValues.map(val => String(val)).sort();
+  };
 
   const performRealEvaluation = () => {
     try {
@@ -74,14 +95,30 @@ const ModelEvaluation = ({
       // Calculate real metrics
       let tp = 0, tn = 0, fp = 0, fn = 0;
       
+      // Also create category-based confusion matrix
+      const categoryNames = getCategoryNames();
+      const categoryMatrix = {};
+      categoryNames.forEach(actualCat => {
+        categoryMatrix[actualCat] = {};
+        categoryNames.forEach(predCat => {
+          categoryMatrix[actualCat][predCat] = 0;
+        });
+      });
+      
       for (let i = 0; i < y_test.length; i++) {
         const actual = y_test[i];
         const predicted = predictedClasses[i];
         
+        // Standard binary confusion matrix
         if (actual === 1 && predicted === 1) tp++;
         else if (actual === 0 && predicted === 0) tn++;
         else if (actual === 0 && predicted === 1) fp++;
         else if (actual === 1 && predicted === 0) fn++;
+
+        // Category-based confusion matrix
+        const actualCategory = categoryNames[actual] || `Class ${actual}`;
+        const predictedCategory = categoryNames[predicted] || `Class ${predicted}`;
+        categoryMatrix[actualCategory][predictedCategory]++;
       }
 
       // Calculate performance metrics
@@ -112,9 +149,11 @@ const ModelEvaluation = ({
 
       console.log('Real evaluation metrics:', realMetrics);
       console.log('Real confusion matrix:', realConfusionMatrix);
+      console.log('Category confusion matrix:', categoryMatrix);
 
       setMetrics(realMetrics);
       setConfusionMatrix(realConfusionMatrix);
+      setCategoryConfusionMatrix(categoryMatrix);
       onEvaluationComplete({ metrics: realMetrics, confusionMatrix: realConfusionMatrix });
 
     } catch (error) {
@@ -124,6 +163,7 @@ const ModelEvaluation = ({
       // Instead of falling back to fake data, show the error and suggestions
       setMetrics(null);
       setConfusionMatrix(null);
+      setCategoryConfusionMatrix(null);
     }
   };
 
@@ -292,10 +332,11 @@ IMPORTANT: Review license/privacy laws before sharing actual data with AI assist
         </div>
       </div>
 
-      {/* Confusion Matrix */}
+      {/* Confusion Matrices */}
       <div className="grid lg:grid-cols-2 gap-8 max-w-6xl mx-auto">
+        {/* Technical Confusion Matrix (TP/FP/TN/FN) */}
         <div className="card">
-          <h2 className="text-xl font-semibold text-gray-900 mb-6">Confusion Matrix</h2>
+          <h2 className="text-xl font-semibold text-gray-900 mb-6">Technical Confusion Matrix</h2>
           <div className="grid grid-cols-2 gap-4 max-w-sm mx-auto">
             <div className="bg-green-100 p-6 rounded-lg border-2 border-green-300">
               <p className="text-2xl font-bold text-green-700">{confusionMatrix.truePositive}</p>
@@ -314,34 +355,91 @@ IMPORTANT: Review license/privacy laws before sharing actual data with AI assist
               <p className="text-sm text-green-600">True Negative</p>
             </div>
           </div>
+          <p className="text-xs text-gray-500 text-center mt-4">
+            Technical view: TP/FP/FN/TN format
+          </p>
         </div>
 
-        <div className="card">
-          <h2 className="text-xl font-semibold text-gray-900 mb-6">Performance Insights</h2>
-          <div className="space-y-4">
-            <div className="flex items-start space-x-3">
-              <Info className="w-5 h-5 text-blue-500 mt-0.5" />
-              <div>
-                <p className="font-medium text-gray-900">Model Performance</p>
-                <p className="text-sm text-gray-600">
-                  {(metrics.accuracy * 100).toFixed(1)}% accuracy on test data.
-                  {metrics.accuracy >= 0.85 ? ' Excellent!' : metrics.accuracy >= 0.75 ? ' Good performance.' : ' Consider improvements.'}
-                </p>
-              </div>
+        {/* Category-Based Confusion Matrix */}
+        {categoryConfusionMatrix && (
+          <div className="card">
+            <h2 className="text-xl font-semibold text-gray-900 mb-6">Category Confusion Matrix</h2>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left p-2 font-medium text-gray-700">Actual ↓ / Predicted →</th>
+                    {getCategoryNames().map(category => (
+                      <th key={category} className="text-center p-2 font-medium text-gray-700">
+                        {category}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {Object.entries(categoryConfusionMatrix).map(([actualCategory, predictions]) => (
+                    <tr key={actualCategory} className="border-b">
+                      <td className="p-2 font-medium text-gray-900">{actualCategory}</td>
+                      {Object.entries(predictions).map(([predCategory, count]) => {
+                        const isCorrect = actualCategory === predCategory;
+                        return (
+                          <td key={predCategory} className={`text-center p-2 font-bold ${
+                            isCorrect ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                          }`}>
+                            {count}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-            
-            <div className="flex items-start space-x-3">
-              <Target className="w-5 h-5 text-green-500 mt-0.5" />
-              <div>
-                <p className="font-medium text-gray-900">Precision vs Recall</p>
-                <p className="text-sm text-gray-600">
-                  {metrics.precision > metrics.recall ? 
-                    'More conservative - avoids false positives.' :
-                    'More sensitive - catches most true cases.'}
-                </p>
-              </div>
+            <p className="text-xs text-gray-500 text-center mt-4">
+              Category view: Actual category names
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Performance Insights */}
+      <div className="card max-w-4xl mx-auto">
+        <h2 className="text-xl font-semibold text-gray-900 mb-6">Performance Insights</h2>
+        <div className="space-y-4">
+          <div className="flex items-start space-x-3">
+            <Info className="w-5 h-5 text-blue-500 mt-0.5" />
+            <div>
+              <p className="font-medium text-gray-900">Model Performance</p>
+              <p className="text-sm text-gray-600">
+                {(metrics.accuracy * 100).toFixed(1)}% accuracy on test data.
+                {metrics.accuracy >= 0.85 ? ' Excellent!' : metrics.accuracy >= 0.75 ? ' Good performance.' : ' Consider improvements.'}
+              </p>
             </div>
           </div>
+          
+          <div className="flex items-start space-x-3">
+            <Target className="w-5 h-5 text-green-500 mt-0.5" />
+            <div>
+              <p className="font-medium text-gray-900">Precision vs Recall</p>
+              <p className="text-sm text-gray-600">
+                {metrics.precision > metrics.recall ? 
+                  'More conservative - avoids false positives.' :
+                  'More sensitive - catches most true cases.'}
+              </p>
+            </div>
+          </div>
+
+          {categoryConfusionMatrix && (
+            <div className="flex items-start space-x-3">
+              <CheckCircle className="w-5 h-5 text-purple-500 mt-0.5" />
+              <div>
+                <p className="font-medium text-gray-900">Category Performance</p>
+                <p className="text-sm text-gray-600">
+                  Check the category confusion matrix above to see how well your model distinguishes between {getCategoryNames().join(' and ')}.
+                </p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
