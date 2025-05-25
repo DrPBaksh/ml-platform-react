@@ -21,6 +21,7 @@ const ModelEvaluation = ({
   const [confusionMatrix, setConfusionMatrix] = useState(null);
   const [showPythonPrompt, setShowPythonPrompt] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [evaluationError, setEvaluationError] = useState(null);
 
   useEffect(() => {
     if (model && data) {
@@ -30,9 +31,14 @@ const ModelEvaluation = ({
 
   const performRealEvaluation = () => {
     try {
-      if (!model.model || !data.testData) {
-        console.error('Missing trained model or test data');
-        return;
+      setEvaluationError(null);
+      
+      if (!model.model) {
+        throw new Error('No trained model available for evaluation');
+      }
+      
+      if (!data.testData || data.testData.length === 0) {
+        throw new Error('No test data available for evaluation');
       }
 
       // Prepare test data in the same format as training
@@ -58,6 +64,11 @@ const ModelEvaluation = ({
 
       // Get real predictions from the trained model
       const predictions = model.model.predict(X_test);
+      
+      if (!predictions || predictions.length === 0) {
+        throw new Error('Model failed to generate predictions on test data');
+      }
+      
       const predictedClasses = predictions.map(p => Math.round(p));
 
       // Calculate real metrics
@@ -79,12 +90,17 @@ const ModelEvaluation = ({
       const recall = tp / (tp + fn) || 0;
       const f1Score = 2 * (precision * recall) / (precision + recall) || 0;
 
+      // Calculate a more realistic AUC estimate based on the confusion matrix
+      const specificity = tn / (tn + fp) || 0;
+      const sensitivity = recall; // Same as recall/true positive rate
+      const auc = (sensitivity + specificity) / 2;
+
       const realMetrics = {
         accuracy,
         precision,
         recall,
         f1Score,
-        auc: 0.5 + Math.abs(accuracy - 0.5) // Simplified AUC estimate
+        auc
       };
 
       const realConfusionMatrix = {
@@ -94,22 +110,20 @@ const ModelEvaluation = ({
         falseNegative: fn
       };
 
+      console.log('Real evaluation metrics:', realMetrics);
+      console.log('Real confusion matrix:', realConfusionMatrix);
+
       setMetrics(realMetrics);
       setConfusionMatrix(realConfusionMatrix);
       onEvaluationComplete({ metrics: realMetrics, confusionMatrix: realConfusionMatrix });
 
     } catch (error) {
       console.error('Error in real evaluation:', error);
-      // Fallback to basic metrics if real evaluation fails
-      const fallbackMetrics = {
-        accuracy: model.trainingAccuracy || 0.85,
-        precision: 0.85,
-        recall: 0.82,
-        f1Score: 0.83,
-        auc: 0.88
-      };
-      setMetrics(fallbackMetrics);
-      setConfusionMatrix({ truePositive: 42, falsePositive: 8, trueNegative: 38, falseNegative: 12 });
+      setEvaluationError(error.message);
+      
+      // Instead of falling back to fake data, show the error and suggestions
+      setMetrics(null);
+      setConfusionMatrix(null);
     }
   };
 
@@ -168,6 +182,63 @@ IMPORTANT: Review license/privacy laws before sharing actual data with AI assist
     return 'bg-red-50 border-red-200';
   };
 
+  // Show error state if evaluation failed
+  if (evaluationError) {
+    return (
+      <div className="space-y-6">
+        <div className="text-center">
+          <h1 className="text-3xl font-bold text-gray-900 mb-4">Model Evaluation</h1>
+          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+            Unable to evaluate model performance.
+          </p>
+        </div>
+
+        <div className="card max-w-4xl mx-auto bg-red-50 border-red-200">
+          <div className="flex items-start space-x-3">
+            <AlertTriangle className="w-6 h-6 text-red-600 mt-1" />
+            <div>
+              <h3 className="font-medium text-red-900 mb-2">Evaluation Error</h3>
+              <p className="text-red-800 mb-4">{evaluationError}</p>
+              
+              <div className="bg-red-100 rounded-lg p-4">
+                <h4 className="font-medium text-red-900 mb-2">💡 Troubleshooting Steps:</h4>
+                <ul className="text-red-800 text-sm space-y-1">
+                  <li>• Ensure your model was properly trained</li>
+                  <li>• Check that test data has the same format as training data</li>
+                  <li>• Verify all required predictor columns are present</li>
+                  <li>• Try retraining the model with different parameters</li>
+                  <li>• Ensure sufficient data samples for evaluation</li>
+                </ul>
+              </div>
+              
+              <button 
+                onClick={performRealEvaluation}
+                className="btn-primary mt-4 flex items-center space-x-2"
+              >
+                <span>Retry Evaluation</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex justify-between max-w-6xl mx-auto">
+          <button onClick={onPrevious} className="btn-secondary flex items-center space-x-2">
+            <ArrowLeft className="w-4 h-4" />
+            <span>Previous</span>
+          </button>
+          <button 
+            onClick={onNext} 
+            disabled={true}
+            className="btn-primary flex items-center space-x-2 opacity-50"
+          >
+            <span>Make Predictions</span>
+            <ArrowRight className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (!metrics) {
     return (
       <div className="flex items-center justify-center min-h-96">
@@ -213,9 +284,9 @@ IMPORTANT: Review license/privacy laws before sharing actual data with AI assist
         <div className="flex items-center space-x-3">
           <CheckCircle className="w-6 h-6 text-green-600" />
           <div>
-            <p className="font-medium text-green-900">✨ Real Model Evaluation</p>
+            <p className="font-medium text-green-900">✨ 100% Real Model Evaluation</p>
             <p className="text-green-800 text-sm">
-              These metrics are calculated from your actual trained model's predictions on test data - not mock results!
+              These metrics are calculated from your actual trained model's predictions on test data - no mock results!
             </p>
           </div>
         </div>
