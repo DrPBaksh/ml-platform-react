@@ -1,10 +1,25 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, ArrowRight, TrendingUp, Target, Info } from 'lucide-react';
+import { ArrowLeft, ArrowRight, TrendingUp, Target, Info, Code, Copy, CheckCircle, AlertTriangle, ExternalLink } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
-const ModelEvaluation = ({ model, data, onEvaluationComplete, onNext, onPrevious, evaluation }) => {
+const ModelEvaluation = ({ 
+  model, 
+  data, 
+  onEvaluationComplete, 
+  onNext, 
+  onPrevious, 
+  evaluation,
+  selectedColumns,
+  correlationResults,
+  preprocessingInfo,
+  trainTestSplit,
+  modelParameters,
+  fileName 
+}) => {
   const [metrics, setMetrics] = useState(null);
   const [confusionMatrix, setConfusionMatrix] = useState(null);
+  const [showPythonPrompt, setShowPythonPrompt] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     if (model && data) {
@@ -33,6 +48,74 @@ const ModelEvaluation = ({ model, data, onEvaluationComplete, onNext, onPrevious
     setMetrics(mockMetrics);
     setConfusionMatrix(mockMatrix);
     onEvaluationComplete({ metrics: mockMetrics, confusionMatrix: mockMatrix });
+  };
+
+  const generatePythonPrompt = () => {
+    const correlationText = correlationResults?.highlyCorrelated?.length > 0 
+      ? `High correlations were found between: ${correlationResults.highlyCorrelated.map(pair => `${pair.pred1} and ${pair.pred2} (${pair.correlation.toFixed(3)})`).join(', ')}`
+      : 'No high correlations (>0.7) were detected between predictor variables';
+
+    const preprocessingText = preprocessingInfo 
+      ? `Data preprocessing included: ${preprocessingInfo.categoricalEncoding ? 'categorical encoding, ' : ''}${preprocessingInfo.featureScaling ? 'feature scaling' : ''}`
+      : 'Standard preprocessing was applied';
+
+    const parametersText = modelParameters 
+      ? `Model parameters: regularization=${modelParameters.regularization || 'none'}, max_iterations=${modelParameters.maxIterations || 1000}, random_state=${modelParameters.randomState || 42}`
+      : 'Default logistic regression parameters were used';
+
+    return `I have a dataset called "${fileName || 'my_dataset'}.csv" that I've been analyzing using a web-based ML platform.
+
+Dataset Information:
+- It has columns: ${selectedColumns?.predictors?.join(', ') || '[predictor columns]'}
+- The target variable is: ${selectedColumns?.target || '[target variable]'}
+- Total records: ${data?.data?.length || '[number of records]'}
+
+Analysis Results:
+- Correlation analysis showed: ${correlationText}
+- Train/test split: ${trainTestSplit?.ratio || 80}% training, ${100 - (trainTestSplit?.ratio || 80)}% testing${trainTestSplit?.stratified ? ' (stratified)' : ''}
+- ${preprocessingText}
+- Algorithm used: Logistic Regression
+- ${parametersText}
+
+Model Performance:
+- Accuracy: ${metrics ? (metrics.accuracy * 100).toFixed(1) : '[accuracy]'}%
+- Precision: ${metrics ? (metrics.precision * 100).toFixed(1) : '[precision]'}%
+- Recall: ${metrics ? (metrics.recall * 100).toFixed(1) : '[recall]'}%
+- F1-Score: ${metrics ? (metrics.f1Score * 100).toFixed(1) : '[f1_score]'}%
+
+Could you please recreate this entire machine learning workflow in Python using scikit-learn? 
+
+Please include:
+1. Data loading and exploration
+2. Correlation analysis and multicollinearity detection
+3. Data preprocessing (encoding, scaling)
+4. Train/test split with the same parameters
+5. Logistic regression model with similar parameters
+6. Model evaluation with the same metrics
+7. Feature importance analysis
+8. Confusion matrix visualization
+9. Best practices for model validation
+10. Comments explaining each step for educational purposes
+
+I'd also like suggestions for:
+- How to improve model performance
+- Alternative algorithms to try
+- Advanced feature engineering techniques
+- Model interpretability methods
+
+Please ensure the code is well-documented and suitable for a DA4 Data Analyst apprentice to learn from.
+
+IMPORTANT: Remember to review your license agreements and consider privacy and data protection laws before sharing any actual data with AI assistants. This prompt template should be customized with your specific dataset information.`;
+  };
+
+  const copyToClipboard = async () => {
+    try {
+      await navigator.clipboard.writeText(generatePythonPrompt());
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy text: ', err);
+    }
   };
 
   const getPerformanceColor = (value) => {
@@ -182,6 +265,133 @@ const ModelEvaluation = ({ model, data, onEvaluationComplete, onNext, onPrevious
           </p>
         </div>
       )}
+
+      {/* Taking It Further Section */}
+      <div className="card max-w-6xl mx-auto bg-gradient-to-br from-purple-50 to-blue-50 border-purple-200">
+        <div className="flex items-center space-x-3 mb-6">
+          <Code className="w-6 h-6 text-purple-600" />
+          <h2 className="text-2xl font-semibold text-gray-900">Taking It Further with Python</h2>
+        </div>
+        
+        <div className="space-y-4">
+          <div className="bg-white rounded-lg p-4 border border-purple-200">
+            <div className="flex items-start space-x-3 mb-3">
+              <TrendingUp className="w-5 h-5 text-purple-500 mt-0.5" />
+              <div>
+                <p className="font-medium text-gray-900">Ready for Professional Development?</p>
+                <p className="text-sm text-gray-600 mt-1">
+                  Programming in Python will give you more flexibility, advanced algorithms, 
+                  and the ability to customize every aspect of your machine learning workflow.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+            <div className="flex items-start space-x-3">
+              <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5" />
+              <div>
+                <p className="font-medium text-amber-800">Important Privacy Notice</p>
+                <p className="text-sm text-amber-700 mt-1">
+                  <strong>Remember to review your license agreements and consider privacy and data protection laws</strong> 
+                  before sharing any actual data with AI assistants like ChatGPT, Gemini, or Claude. 
+                  The prompt below is a template - customize it with your specific dataset information.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="font-medium text-gray-900">
+                LLM Prompt Template for Python Code Generation
+              </p>
+              <div className="flex space-x-2">
+                <button
+                  onClick={() => setShowPythonPrompt(!showPythonPrompt)}
+                  className="btn-secondary text-sm flex items-center space-x-2"
+                >
+                  <Code className="w-4 h-4" />
+                  <span>{showPythonPrompt ? 'Hide' : 'Show'} Prompt</span>
+                </button>
+                {showPythonPrompt && (
+                  <button
+                    onClick={copyToClipboard}
+                    className={`btn-primary text-sm flex items-center space-x-2 ${copied ? 'bg-green-600' : ''}`}
+                  >
+                    {copied ? <CheckCircle className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                    <span>{copied ? 'Copied!' : 'Copy Prompt'}</span>
+                  </button>
+                )}
+              </div>
+            </div>
+            
+            <p className="text-sm text-gray-600">
+              This prompt includes all the parameters and decisions you made in this app, 
+              ready to paste into ChatGPT, Gemini, Claude, or any coding AI assistant.
+            </p>
+          </div>
+
+          {showPythonPrompt && (
+            <div className="bg-gray-900 text-green-400 p-4 rounded-lg font-mono text-sm overflow-x-auto">
+              <pre className="whitespace-pre-wrap">{generatePythonPrompt()}</pre>
+            </div>
+          )}
+
+          <div className="grid md:grid-cols-3 gap-4 mt-6">
+            <div className="bg-white rounded-lg p-4 border border-gray-200">
+              <h3 className="font-medium text-gray-900 mb-2">What You'll Get</h3>
+              <ul className="text-sm text-gray-600 space-y-1">
+                <li>• Complete Python workflow</li>
+                <li>• scikit-learn implementation</li>
+                <li>• Professional best practices</li>
+                <li>• Educational comments</li>
+                <li>• Improvement suggestions</li>
+              </ul>
+            </div>
+            
+            <div className="bg-white rounded-lg p-4 border border-gray-200">
+              <h3 className="font-medium text-gray-900 mb-2">Advanced Features</h3>
+              <ul className="text-sm text-gray-600 space-y-1">
+                <li>• Cross-validation</li>
+                <li>• Hyperparameter tuning</li>
+                <li>• Feature selection</li>
+                <li>• Model interpretability</li>
+                <li>• Advanced algorithms</li>
+              </ul>
+            </div>
+            
+            <div className="bg-white rounded-lg p-4 border border-gray-200">
+              <h3 className="font-medium text-gray-900 mb-2">DA4 Skills</h3>
+              <ul className="text-sm text-gray-600 space-y-1">
+                <li>• Python programming</li>
+                <li>• Advanced analytics</li>
+                <li>• Code documentation</li>
+                <li>• Professional workflows</li>
+                <li>• Portfolio development</li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="flex items-center space-x-2 mb-2">
+              <ExternalLink className="w-4 h-4 text-blue-600" />
+              <p className="font-medium text-blue-900">Recommended AI Assistants</p>
+            </div>
+            <div className="grid md:grid-cols-3 gap-3 text-sm">
+              <div className="text-blue-800">
+                <strong>ChatGPT:</strong> Excellent for educational explanations and step-by-step code
+              </div>
+              <div className="text-blue-800">
+                <strong>Claude:</strong> Great for comprehensive analysis and best practices
+              </div>
+              <div className="text-blue-800">
+                <strong>Gemini:</strong> Good for integrating with Google Colab notebooks
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <div className="flex justify-between max-w-6xl mx-auto">
         <button
