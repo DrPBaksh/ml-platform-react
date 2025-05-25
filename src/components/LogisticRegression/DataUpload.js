@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Upload, AlertCircle, CheckCircle, FileText, ArrowRight, Shield, Lock, Database, Sparkles } from 'lucide-react';
+import { Upload, AlertCircle, CheckCircle, FileText, ArrowRight, Shield, Lock, Database, Sparkles, Info, AlertTriangle } from 'lucide-react';
 import Papa from 'papaparse';
 import HelpTooltip from '../HelpTooltip';
 
@@ -268,6 +268,84 @@ const DataUpload = ({ onDataUploaded, onNext, data }) => {
         </p>
       </div>
 
+      {/* Clean Data Expectation Notice */}
+      <div className="bg-blue-50 border border-blue-200 rounded-xl p-6 max-w-4xl mx-auto">
+        <div className="flex items-start space-x-4">
+          <div className="flex-shrink-0">
+            <Info className="w-6 h-6 text-blue-600 mt-1" />
+          </div>
+          <div className="flex-1">
+            <div className="flex items-center space-x-3 mb-3">
+              <h3 className="font-semibold text-blue-900">This App Expects Clean Data</h3>
+              <HelpTooltip 
+                title="What is Clean Data? - DA4 Essential Knowledge" 
+                level="beginner"
+                content={
+                  <div className="space-y-3">
+                    <p><strong>Clean data means your dataset is:</strong></p>
+                    <ul className="space-y-2 text-sm">
+                      <li>• <strong>Properly formatted:</strong> CSV with clear column headers</li>
+                      <li>• <strong>Consistent values:</strong> Same format throughout each column</li>
+                      <li>• <strong>Minimal missing data:</strong> Few empty cells or "N/A" values</li>
+                      <li>• <strong>No duplicates:</strong> Each row represents a unique observation</li>
+                      <li>• <strong>Appropriate data types:</strong> Numbers as numbers, text as text</li>
+                      <li>• <strong>Reasonable size:</strong> At least 50+ rows for meaningful analysis</li>
+                    </ul>
+                    <div className="bg-green-50 p-3 rounded-lg mt-3">
+                      <p className="text-green-800 font-medium">🧹 DA4 Reality: Most real-world data needs cleaning first - this app focuses on the analysis after cleaning!</p>
+                    </div>
+                  </div>
+                }
+              />
+            </div>
+            
+            <p className="text-blue-800 text-sm mb-4">
+              For the best experience, please ensure your data is already cleaned and ready for analysis. 
+              This app is designed to teach machine learning concepts, not data cleaning techniques.
+            </p>
+            
+            <div className="grid md:grid-cols-2 gap-4">
+              <div className="bg-white rounded-lg p-4 border border-blue-200">
+                <h4 className="font-medium text-blue-900 mb-2 flex items-center">
+                  <CheckCircle className="w-4 h-4 text-green-600 mr-2" />
+                  Good Clean Data Has:
+                </h4>
+                <ul className="text-sm text-blue-700 space-y-1">
+                  <li>• Clear column headers in row 1</li>
+                  <li>• Consistent data formats</li>
+                  <li>• Minimal missing values (&lt;10%)</li>
+                  <li>• No obvious errors or typos</li>
+                  <li>• Appropriate data types</li>
+                  <li>• Sufficient rows (50+)</li>
+                </ul>
+              </div>
+              
+              <div className="bg-white rounded-lg p-4 border border-blue-200">
+                <h4 className="font-medium text-blue-900 mb-2 flex items-center">
+                  <AlertTriangle className="w-4 h-4 text-amber-600 mr-2" />
+                  Data That May Need Cleaning:
+                </h4>
+                <ul className="text-sm text-blue-700 space-y-1">
+                  <li>• Many empty cells or "N/A" values</li>
+                  <li>• Inconsistent date formats</li>
+                  <li>• Mixed data types in columns</li>
+                  <li>• Duplicate rows</li>
+                  <li>• Special characters in numbers</li>
+                  <li>• Very small datasets (&lt;20 rows)</li>
+                </ul>
+              </div>
+            </div>
+            
+            <div className="mt-4 bg-amber-50 border border-amber-200 rounded-lg p-3">
+              <p className="text-amber-800 text-sm">
+                <strong>💡 DA4 Tip:</strong> If your data needs cleaning, consider using tools like Excel, Google Sheets, 
+                or Python/R first. This app will help you learn what to do <em>after</em> your data is clean!
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Privacy Assurance */}
       <div className="bg-green-50 border border-green-200 rounded-xl p-4 max-w-4xl mx-auto">
         <div className="flex items-center space-x-3">
@@ -309,7 +387,7 @@ const DataUpload = ({ onDataUploaded, onNext, data }) => {
             />
           </div>
           <p className="text-blue-800 text-sm mb-4">
-            New to machine learning? Start with the famous Iris dataset - perfect for learning classification!
+            New to machine learning? Start with the famous Iris dataset - it's already perfectly clean and ready for analysis!
           </p>
           <button
             onClick={loadIrisExample}
