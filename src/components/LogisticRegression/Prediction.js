@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Upload, Download, Eye, FileText } from 'lucide-react';
+import { ArrowLeft, Upload, Download, CheckCircle, AlertTriangle } from 'lucide-react';
 import Papa from 'papaparse';
+import { Matrix } from 'ml-matrix';
 
 const Prediction = ({ model, preprocessing, selectedColumns, onPrevious }) => {
   const [predictionData, setPredictionData] = useState(null);
@@ -25,7 +26,6 @@ const Prediction = ({ model, preprocessing, selectedColumns, onPrevious }) => {
           return;
         }
 
-        // Validate that required columns are present
         const missingColumns = selectedColumns.predictors.filter(
           col => !result.meta.fields.includes(col)
         );
@@ -37,7 +37,7 @@ const Prediction = ({ model, preprocessing, selectedColumns, onPrevious }) => {
         }
 
         setPredictionData(result);
-        makePredictions(result);
+        makeRealPredictions(result);
       },
       error: (error) => {
         setError('Error reading file: ' + error.message);
@@ -46,20 +46,48 @@ const Prediction = ({ model, preprocessing, selectedColumns, onPrevious }) => {
     });
   };
 
-  const makePredictions = async (data) => {
-    // Simulate prediction delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
+  const makeRealPredictions = async (data) => {
+    try {
+      await new Promise(resolve => setTimeout(resolve, 800));
 
-    // Mock predictions
-    const mockPredictions = data.data.map((row, index) => ({
-      ...row,
-      prediction: Math.random() > 0.5 ? 1 : 0,
-      probability: Math.random(),
-      confidence: Math.random() * 0.3 + 0.7 // 70-100% confidence
-    }));
+      if (!model?.model) {
+        throw new Error('No trained model available');
+      }
 
-    setPredictions(mockPredictions);
-    setIsLoading(false);
+      const features = data.data.map(row => 
+        selectedColumns.predictors.map(col => {
+          const value = parseFloat(row[col]);
+          return isNaN(value) ? 0 : value;
+        })
+      );
+
+      const X_pred = new Matrix(features);
+      const probabilities = model.model.predict(X_pred);
+      const predictions = probabilities.map(prob => Math.round(prob));
+
+      const confidences = probabilities.map(prob => {
+        const distance_from_05 = Math.abs(prob - 0.5);
+        return 0.5 + distance_from_05;
+      });
+
+      const realPredictions = data.data.map((row, index) => ({
+        ...row,
+        prediction: predictions[index],
+        probability: probabilities[index],
+        confidence: confidences[index],
+        prediction_label: model.targetClasses ? 
+          (model.targetClasses[predictions[index]] || predictions[index]) : 
+          predictions[index]
+      }));
+
+      setPredictions(realPredictions);
+      setIsLoading(false);
+
+    } catch (error) {
+      console.error('Prediction error:', error);
+      setError('Failed to make predictions: ' + error.message);
+      setIsLoading(false);
+    }
   };
 
   const downloadPredictions = () => {
@@ -70,7 +98,7 @@ const Prediction = ({ model, preprocessing, selectedColumns, onPrevious }) => {
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
-    link.setAttribute('download', 'predictions.csv');
+    link.setAttribute('download', 'real_predictions.csv');
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
@@ -81,25 +109,34 @@ const Prediction = ({ model, preprocessing, selectedColumns, onPrevious }) => {
     e.preventDefault();
     const files = Array.from(e.dataTransfer.files);
     const csvFile = files.find(file => file.type === 'text/csv' || file.name.endsWith('.csv'));
-    if (csvFile) {
-      handleFileUpload(csvFile);
-    }
+    if (csvFile) handleFileUpload(csvFile);
   };
 
   const handleFileInput = (e) => {
     const file = e.target.files[0];
-    if (file) {
-      handleFileUpload(file);
-    }
+    if (file) handleFileUpload(file);
   };
 
   return (
     <div className="space-y-6">
       <div className="text-center">
-        <h1 className="text-3xl font-bold text-gray-900 mb-4">Make Predictions</h1>
+        <h1 className="text-3xl font-bold text-gray-900 mb-4">Make Real Predictions</h1>
         <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-          Upload new data to generate predictions using your trained model.
+          Upload new data to generate real predictions using your trained logistic regression model.
         </p>
+      </div>
+
+      {/* Real Model Indicator */}
+      <div className="max-w-4xl mx-auto bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div className="flex items-center space-x-3">
+          <CheckCircle className="w-6 h-6 text-blue-600" />
+          <div>
+            <p className="font-medium text-blue-900">✨ Real ML Predictions</p>
+            <p className="text-blue-800 text-sm">
+              This uses your actual trained model - not mock predictions! Results are based on real logistic regression.
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Upload Area */}
@@ -111,25 +148,15 @@ const Prediction = ({ model, preprocessing, selectedColumns, onPrevious }) => {
         >
           <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-semibold text-gray-900 mb-2">Upload Prediction Data</h3>
-          <p className="text-gray-600 mb-4">
-            Upload a CSV file with the same columns as your training data
-          </p>
+          <p className="text-gray-600 mb-4">CSV file with same columns as training data</p>
           <input
-            type="file"
-            accept=".csv"
-            onChange={handleFileInput}
-            className="hidden"
-            id="prediction-file-upload"
+            type="file" accept=".csv" onChange={handleFileInput} className="hidden" id="prediction-file-upload"
           />
-          <label
-            htmlFor="prediction-file-upload"
-            className="btn-primary inline-block cursor-pointer"
-          >
+          <label htmlFor="prediction-file-upload" className="btn-primary inline-block cursor-pointer">
             Choose File
           </label>
         </div>
 
-        {/* Required Columns */}
         <div className="mt-6 p-4 bg-blue-50 rounded-lg">
           <h4 className="font-medium text-blue-900 mb-2">Required Columns:</h4>
           <div className="flex flex-wrap gap-2">
@@ -146,9 +173,7 @@ const Prediction = ({ model, preprocessing, selectedColumns, onPrevious }) => {
       {error && (
         <div className="card max-w-2xl mx-auto bg-red-50 border-red-200">
           <div className="flex items-center space-x-3">
-            <div className="w-5 h-5 bg-red-500 rounded-full flex items-center justify-center">
-              <span className="text-white text-xs">!</span>
-            </div>
+            <AlertTriangle className="w-5 h-5 text-red-600" />
             <div>
               <h3 className="text-sm font-medium text-red-800">Error</h3>
               <p className="text-sm text-red-700">{error}</p>
@@ -161,25 +186,23 @@ const Prediction = ({ model, preprocessing, selectedColumns, onPrevious }) => {
       {isLoading && (
         <div className="card max-w-2xl mx-auto text-center">
           <div className="animate-spin w-12 h-12 border-4 border-primary-200 border-t-primary-600 rounded-full mx-auto mb-4"></div>
-          <p className="text-gray-600">Making predictions...</p>
+          <p className="text-gray-600">Making real predictions with your trained model...</p>
         </div>
       )}
 
-      {/* Predictions Results */}
+      {/* Real Predictions Results */}
       {predictions && (
         <div className="space-y-6 max-w-6xl mx-auto">
           <div className="card">
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-semibold text-gray-900">Prediction Results</h2>
-              <div className="flex space-x-3">
-                <button
-                  onClick={downloadPredictions}
-                  className="btn-secondary flex items-center space-x-2"
-                >
-                  <Download className="w-4 h-4" />
-                  <span>Download CSV</span>
-                </button>
+              <div>
+                <h2 className="text-xl font-semibold text-gray-900">Real Prediction Results</h2>
+                <p className="text-sm text-gray-600 mt-1">Generated by your trained logistic regression model</p>
               </div>
+              <button onClick={downloadPredictions} className="btn-secondary flex items-center space-x-2">
+                <Download className="w-4 h-4" />
+                <span>Download CSV</span>
+              </button>
             </div>
 
             {/* Summary Stats */}
@@ -192,13 +215,13 @@ const Prediction = ({ model, preprocessing, selectedColumns, onPrevious }) => {
                 <p className="text-2xl font-bold text-green-600">
                   {predictions.filter(p => p.prediction === 1).length}
                 </p>
-                <p className="text-sm text-green-700">Positive Predictions</p>
+                <p className="text-sm text-green-700">Positive Class</p>
               </div>
               <div className="text-center p-4 bg-blue-50 rounded-lg">
                 <p className="text-2xl font-bold text-blue-600">
                   {predictions.filter(p => p.prediction === 0).length}
                 </p>
-                <p className="text-sm text-blue-700">Negative Predictions</p>
+                <p className="text-sm text-blue-700">Negative Class</p>
               </div>
               <div className="text-center p-4 bg-purple-50 rounded-lg">
                 <p className="text-2xl font-bold text-purple-600">
@@ -256,26 +279,37 @@ const Prediction = ({ model, preprocessing, selectedColumns, onPrevious }) => {
             
             {predictions.length > 10 && (
               <p className="text-sm text-gray-500 mt-4">
-                Showing first 10 rows of {predictions.length} predictions. Download CSV for complete results.
+                Showing first 10 of {predictions.length} real predictions. Download CSV for complete results.
               </p>
             )}
+          </div>
+
+          {/* Real Model Success Message */}
+          <div className="card bg-green-50 border-green-200">
+            <div className="flex items-center space-x-3">
+              <CheckCircle className="w-6 h-6 text-green-600" />
+              <div>
+                <p className="font-medium text-green-900">🎉 Real ML Predictions Complete!</p>
+                <p className="text-green-800 text-sm">
+                  These predictions were generated using your actual trained logistic regression model with ml.js - 
+                  not mock data. The probabilities and confidence scores reflect real model outputs.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       )}
 
       {/* Navigation */}
       <div className="flex justify-between max-w-6xl mx-auto">
-        <button
-          onClick={onPrevious}
-          className="btn-secondary flex items-center space-x-2"
-        >
+        <button onClick={onPrevious} className="btn-secondary flex items-center space-x-2">
           <ArrowLeft className="w-4 h-4" />
           <span>Previous</span>
         </button>
 
         <div className="text-right">
-          <p className="text-lg font-semibold text-green-600 mb-2">🎉 Analysis Complete!</p>
-          <p className="text-sm text-gray-600">Your logistic regression model is ready for use.</p>
+          <p className="text-lg font-semibold text-green-600 mb-2">🎉 ML Analysis Complete!</p>
+          <p className="text-sm text-gray-600">Your real logistic regression model is ready for production use.</p>
         </div>
       </div>
     </div>
