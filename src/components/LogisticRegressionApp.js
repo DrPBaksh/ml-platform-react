@@ -59,6 +59,13 @@ const LogisticRegressionApp = () => {
     }
   };
 
+  // Function to skip training and go directly to evaluation with loaded model
+  const handleSkipToEvaluation = () => {
+    if (model && splitData) {
+      setCurrentStep(8); // Go to Model Evaluation step
+    }
+  };
+
   const canProceedToStep = (stepId) => {
     switch (stepId) {
       case 2: return data !== null;
@@ -67,7 +74,7 @@ const LogisticRegressionApp = () => {
       case 5: return selectedColumns.predictors.length > 0 && selectedColumns.target;
       case 6: return edaResults !== null;
       case 7: return preprocessedData !== null;
-      case 8: return model !== null;
+      case 8: return model !== null; // Allow evaluation if model exists (even if loaded)
       case 9: return evaluation !== null;
       default: return true;
     }
@@ -91,6 +98,19 @@ const LogisticRegressionApp = () => {
   const handleModelLoad = (loadedModel) => {
     setModel(loadedModel);
     setEvaluation(null);
+    
+    // If we have both model and split data, we can proceed to evaluation
+    if (loadedModel && splitData) {
+      // Automatically set up the required data for evaluation
+      if (loadedModel.selectedColumns) {
+        setSelectedColumns(loadedModel.selectedColumns);
+      }
+      
+      // Set parameters if available
+      if (loadedModel.parameters) {
+        setModelParameters(loadedModel.parameters);
+      }
+    }
   };
 
   const handleEDADecisions = (decisions) => {
@@ -145,7 +165,9 @@ const LogisticRegressionApp = () => {
             onSplitComplete={handleSplitComplete}
             onNext={handleNext}
             onPrevious={handlePrevious}
+            onSkipToEvaluation={handleSkipToEvaluation}
             splitData={splitData}
+            model={model}
           />
         );
       case 4:
@@ -219,6 +241,7 @@ const LogisticRegressionApp = () => {
             preprocessing={preprocessedData}
             selectedColumns={selectedColumns}
             onPrevious={handlePrevious}
+            data={splitData}
           />
         );
       default:
