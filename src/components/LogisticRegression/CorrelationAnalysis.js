@@ -18,7 +18,7 @@ const CorrelationAnalysis = ({ data, selectedColumns, onNext, onPrevious, onColu
   }, [data, selectedColumns]);
 
   useEffect(() => {
-    if (selectedPredictor1 && selectedPredictor2 && data) {
+    if (selectedPredictor1 && selectedPredictor2 && selectedPredictor1 !== selectedPredictor2 && data) {
       generateScatterData();
     }
   }, [selectedPredictor1, selectedPredictor2, data]);
@@ -58,9 +58,10 @@ const CorrelationAnalysis = ({ data, selectedColumns, onNext, onPrevious, onColu
     setCorrelationMatrix(matrix);
     setHighlyCorrelated(highCorr);
     
+    // Set different default variables for X and Y axes
     if (numericPredictors.length >= 2) {
       setSelectedPredictor1(numericPredictors[0]);
-      setSelectedPredictor2(numericPredictors[1]);
+      setSelectedPredictor2(numericPredictors[1]); // Different from predictor1
     }
   };
 
@@ -85,14 +86,16 @@ const CorrelationAnalysis = ({ data, selectedColumns, onNext, onPrevious, onColu
   };
 
   const generateScatterData = () => {
-    const scatter = data.data
+    // Get the data pairs and sort them by X-axis variable for better visualization
+    const pairs = data.data
       .map(row => ({
         x: parseFloat(row[selectedPredictor1]),
         y: parseFloat(row[selectedPredictor2])
       }))
-      .filter(point => !isNaN(point.x) && !isNaN(point.y));
+      .filter(point => !isNaN(point.x) && !isNaN(point.y))
+      .sort((a, b) => a.x - b.x); // Sort by X-axis for cleaner visualization
     
-    setScatterData(scatter);
+    setScatterData(pairs);
   };
 
   const removeHighlyCorrelatedVariable = (pred1, pred2) => {
@@ -101,6 +104,36 @@ const CorrelationAnalysis = ({ data, selectedColumns, onNext, onPrevious, onColu
       ...selectedColumns,
       predictors: updatedPredictors
     });
+  };
+
+  const handlePredictor1Change = (value) => {
+    setSelectedPredictor1(value);
+    // If both predictors are the same, automatically change the second one
+    if (value === selectedPredictor2) {
+      const numericPredictors = selectedColumns.predictors.filter(pred => {
+        const values = data.data.map(row => parseFloat(row[pred])).filter(v => !isNaN(v));
+        return values.length > data.data.length * 0.7;
+      });
+      const alternativePredictor = numericPredictors.find(pred => pred !== value);
+      if (alternativePredictor) {
+        setSelectedPredictor2(alternativePredictor);
+      }
+    }
+  };
+
+  const handlePredictor2Change = (value) => {
+    setSelectedPredictor2(value);
+    // If both predictors are the same, automatically change the first one
+    if (value === selectedPredictor1) {
+      const numericPredictors = selectedColumns.predictors.filter(pred => {
+        const values = data.data.map(row => parseFloat(row[pred])).filter(v => !isNaN(v));
+        return values.length > data.data.length * 0.7;
+      });
+      const alternativePredictor = numericPredictors.find(pred => pred !== value);
+      if (alternativePredictor) {
+        setSelectedPredictor1(alternativePredictor);
+      }
+    }
   };
 
   const numericPredictors = selectedColumns.predictors.filter(pred => {
@@ -262,7 +295,7 @@ const CorrelationAnalysis = ({ data, selectedColumns, onNext, onPrevious, onColu
           {/* Scatter Plot */}
           <div className="card max-w-4xl mx-auto">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-semibold text-gray-900">Variable Relationship Visualization</h2>
+              <h2 className="text-xl font-semibold text-gray-900">Variable Relationship Visualisation</h2>
               <HelpTooltip 
                 title="Interpreting Scatter Plots" 
                 level="beginner"
@@ -286,7 +319,7 @@ const CorrelationAnalysis = ({ data, selectedColumns, onNext, onPrevious, onColu
                 <label className="block text-sm font-medium text-gray-700 mb-2">X-Axis Variable</label>
                 <select
                   value={selectedPredictor1}
-                  onChange={(e) => setSelectedPredictor1(e.target.value)}
+                  onChange={(e) => handlePredictor1Change(e.target.value)}
                   className="input-field"
                 >
                   {numericPredictors.map(pred => (
@@ -298,7 +331,7 @@ const CorrelationAnalysis = ({ data, selectedColumns, onNext, onPrevious, onColu
                 <label className="block text-sm font-medium text-gray-700 mb-2">Y-Axis Variable</label>
                 <select
                   value={selectedPredictor2}
-                  onChange={(e) => setSelectedPredictor2(e.target.value)}
+                  onChange={(e) => handlePredictor2Change(e.target.value)}
                   className="input-field"
                 >
                   {numericPredictors.map(pred => (
@@ -308,7 +341,19 @@ const CorrelationAnalysis = ({ data, selectedColumns, onNext, onPrevious, onColu
               </div>
             </div>
 
-            {scatterData.length > 0 && (
+            {/* Warning if same variable selected */}
+            {selectedPredictor1 === selectedPredictor2 && (
+              <div className="mb-4 bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                <div className="flex items-center space-x-2">
+                  <AlertTriangle className="w-4 h-4 text-yellow-600" />
+                  <p className="text-yellow-800 text-sm font-medium">
+                    Same variable selected for both axes - this will always show perfect correlation!
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {scatterData.length > 0 && selectedPredictor1 !== selectedPredictor2 && (
               <>
                 <div className="h-64 mb-4">
                   <ResponsiveContainer width="100%" height="100%">
@@ -359,7 +404,7 @@ const CorrelationAnalysis = ({ data, selectedColumns, onNext, onPrevious, onColu
           onClick={onNext}
           className="btn-primary flex items-center space-x-2"
         >
-          <span>Continue to Train/Test Split</span>
+          <span>Continue to Exploratory Data Analysis</span>
           <ArrowRight className="w-4 h-4" />
         </button>
       </div>
