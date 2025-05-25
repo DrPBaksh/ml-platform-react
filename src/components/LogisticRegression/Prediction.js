@@ -1,13 +1,35 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Upload, Download, CheckCircle, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Upload, Download, CheckCircle, AlertTriangle, Info, FileText } from 'lucide-react';
 import Papa from 'papaparse';
 import { Matrix } from 'ml-matrix';
 
-const Prediction = ({ model, preprocessing, selectedColumns, onPrevious }) => {
+const Prediction = ({ model, preprocessing, selectedColumns, onPrevious, data }) => {
   const [predictionData, setPredictionData] = useState(null);
   const [predictions, setPredictions] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  // Get actual category names from the original training data
+  const getCategoryNames = () => {
+    if (!data?.trainData || !selectedColumns?.target) return ['Class 0', 'Class 1'];
+    
+    const uniqueValues = [...new Set(data.trainData.map(row => row[selectedColumns.target]))];
+    
+    // If string values, return them directly
+    if (typeof uniqueValues[0] === 'string') {
+      return uniqueValues.sort();
+    }
+    
+    // If numeric, check if we have targetClasses mapping
+    if (model?.targetClasses && model.targetClasses.length > 0) {
+      return model.targetClasses;
+    }
+    
+    // Default to generic names
+    return uniqueValues.map(val => String(val)).sort();
+  };
+
+  const categoryNames = getCategoryNames();
 
   const handleFileUpload = (file) => {
     if (!file) return;
@@ -72,12 +94,10 @@ const Prediction = ({ model, preprocessing, selectedColumns, onPrevious }) => {
 
       const realPredictions = data.data.map((row, index) => ({
         ...row,
-        prediction: predictions[index],
+        prediction_index: predictions[index],
+        prediction_category: categoryNames[predictions[index]] || `Class ${predictions[index]}`,
         probability: probabilities[index],
-        confidence: confidences[index],
-        prediction_label: model.targetClasses ? 
-          (model.targetClasses[predictions[index]] || predictions[index]) : 
-          predictions[index]
+        confidence: confidences[index]
       }));
 
       setPredictions(realPredictions);
@@ -126,48 +146,91 @@ const Prediction = ({ model, preprocessing, selectedColumns, onPrevious }) => {
         </p>
       </div>
 
-      {/* Real Model Indicator */}
-      <div className="max-w-4xl mx-auto bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <div className="flex items-center space-x-3">
-          <CheckCircle className="w-6 h-6 text-blue-600" />
-          <div>
-            <p className="font-medium text-blue-900">✨ Real ML Predictions</p>
-            <p className="text-blue-800 text-sm">
-              This uses your actual trained model - not mock predictions! Results are based on real logistic regression.
-            </p>
+      {/* Model Status Indicator */}
+      <div className="max-w-4xl mx-auto">
+        {model?.model ? (
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+            <div className="flex items-center space-x-3">
+              <CheckCircle className="w-6 h-6 text-green-600" />
+              <div>
+                <p className="font-medium text-green-900">✅ Model Ready</p>
+                <p className="text-green-800 text-sm">
+                  Using trained {model.type || 'Logistic Regression'} model • 
+                  Features: {model.features?.length || 0} • 
+                  Target: {selectedColumns?.target || 'Unknown'} • 
+                  Accuracy: {model.trainingAccuracy ? (model.trainingAccuracy * 100).toFixed(1) + '%' : 'N/A'}
+                </p>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+            <div className="flex items-center space-x-3">
+              <AlertTriangle className="w-6 h-6 text-yellow-600" />
+              <div>
+                <p className="font-medium text-yellow-900">⚠️ No Model Available</p>
+                <p className="text-yellow-800 text-sm">
+                  Please train a model first or upload a saved model file to make predictions.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Category Information */}
+      {model?.model && (
+        <div className="card max-w-4xl mx-auto">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+            <Info className="w-5 h-5 text-blue-600 mr-2" />
+            Prediction Categories
+          </h3>
+          <div className="bg-blue-50 rounded-lg p-4">
+            <p className="text-blue-900 font-medium mb-2">Your model predicts between these categories:</p>
+            <div className="flex flex-wrap gap-2">
+              {categoryNames.map((category, index) => (
+                <span key={index} className={`px-3 py-1 rounded-full text-sm font-medium ${
+                  index === 0 ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
+                }`}>
+                  {category} (Class {index})
+                </span>
+              ))}
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Upload Area */}
-      <div className="card max-w-2xl mx-auto">
-        <div
-          className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-primary-400 hover:bg-primary-50 transition-all duration-300"
-          onDrop={handleDrop}
-          onDragOver={(e) => e.preventDefault()}
-        >
-          <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">Upload Prediction Data</h3>
-          <p className="text-gray-600 mb-4">CSV file with same columns as training data</p>
-          <input
-            type="file" accept=".csv" onChange={handleFileInput} className="hidden" id="prediction-file-upload"
-          />
-          <label htmlFor="prediction-file-upload" className="btn-primary inline-block cursor-pointer">
-            Choose File
-          </label>
-        </div>
+      {model?.model && (
+        <div className="card max-w-2xl mx-auto">
+          <div
+            className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-primary-400 hover:bg-primary-50 transition-all duration-300"
+            onDrop={handleDrop}
+            onDragOver={(e) => e.preventDefault()}
+          >
+            <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Upload Prediction Data</h3>
+            <p className="text-gray-600 mb-4">CSV file with same columns as training data</p>
+            <input
+              type="file" accept=".csv" onChange={handleFileInput} className="hidden" id="prediction-file-upload"
+            />
+            <label htmlFor="prediction-file-upload" className="btn-primary inline-block cursor-pointer">
+              Choose File
+            </label>
+          </div>
 
-        <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-          <h4 className="font-medium text-blue-900 mb-2">Required Columns:</h4>
-          <div className="flex flex-wrap gap-2">
-            {selectedColumns.predictors.map(col => (
-              <span key={col} className="px-2 py-1 bg-blue-100 text-blue-800 text-sm rounded">
-                {col}
-              </span>
-            ))}
+          <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+            <h4 className="font-medium text-blue-900 mb-2">Required Columns:</h4>
+            <div className="flex flex-wrap gap-2">
+              {selectedColumns.predictors.map(col => (
+                <span key={col} className="px-2 py-1 bg-blue-100 text-blue-800 text-sm rounded">
+                  {col}
+                </span>
+              ))}
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Error Display */}
       {error && (
@@ -211,18 +274,20 @@ const Prediction = ({ model, preprocessing, selectedColumns, onPrevious }) => {
                 <p className="text-2xl font-bold text-gray-900">{predictions.length}</p>
                 <p className="text-sm text-gray-600">Total Predictions</p>
               </div>
-              <div className="text-center p-4 bg-green-50 rounded-lg">
-                <p className="text-2xl font-bold text-green-600">
-                  {predictions.filter(p => p.prediction === 1).length}
-                </p>
-                <p className="text-sm text-green-700">Positive Class</p>
-              </div>
-              <div className="text-center p-4 bg-blue-50 rounded-lg">
-                <p className="text-2xl font-bold text-blue-600">
-                  {predictions.filter(p => p.prediction === 0).length}
-                </p>
-                <p className="text-sm text-blue-700">Negative Class</p>
-              </div>
+              {categoryNames.map((category, index) => (
+                <div key={index} className={`text-center p-4 rounded-lg ${
+                  index === 0 ? 'bg-red-50' : 'bg-green-50'
+                }`}>
+                  <p className={`text-2xl font-bold ${
+                    index === 0 ? 'text-red-600' : 'text-green-600'
+                  }`}>
+                    {predictions.filter(p => p.prediction_index === index).length}
+                  </p>
+                  <p className={`text-sm ${
+                    index === 0 ? 'text-red-700' : 'text-green-700'
+                  }`}>{category}</p>
+                </div>
+              ))}
               <div className="text-center p-4 bg-purple-50 rounded-lg">
                 <p className="text-2xl font-bold text-purple-600">
                   {(predictions.reduce((acc, p) => acc + p.confidence, 0) / predictions.length * 100).toFixed(0)}%
@@ -258,11 +323,11 @@ const Prediction = ({ model, preprocessing, selectedColumns, onPrevious }) => {
                       ))}
                       <td className="px-4 py-3 text-sm">
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          row.prediction === 1 
+                          row.prediction_index === 1 
                             ? 'bg-green-100 text-green-800' 
                             : 'bg-red-100 text-red-800'
                         }`}>
-                          {row.prediction === 1 ? 'Positive' : 'Negative'}
+                          {row.prediction_category}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-900">
