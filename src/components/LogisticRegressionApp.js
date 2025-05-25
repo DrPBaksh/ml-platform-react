@@ -17,12 +17,16 @@ const LogisticRegressionApp = () => {
   const [data, setData] = useState(null);
   const [selectedColumns, setSelectedColumns] = useState({ predictors: [], target: '' });
   const [splitData, setSplitData] = useState(null);
+  const [splitParameters, setSplitParameters] = useState(null);
   const [correlationResults, setCorrelationResults] = useState(null);
   const [edaResults, setEdaResults] = useState(null);
   const [edaDecisions, setEdaDecisions] = useState([]);
   const [preprocessedData, setPreprocessedData] = useState(null);
+  const [preprocessingInfo, setPreprocessingInfo] = useState(null);
   const [model, setModel] = useState(null);
+  const [modelParameters, setModelParameters] = useState(null);
   const [evaluation, setEvaluation] = useState(null);
+  const [fileName, setFileName] = useState('');
 
   // CORRECTED WORKFLOW ORDER: Column Selection → Train/Test Split → Correlation → EDA → Preprocessing → Training
   const steps = [
@@ -73,11 +77,14 @@ const LogisticRegressionApp = () => {
     setSelectedColumns(newColumns);
     // Reset dependent states when columns change
     setSplitData(null);
+    setSplitParameters(null);
     setCorrelationResults(null);
     setEdaResults(null);
     setEdaDecisions([]);
     setPreprocessedData(null);
+    setPreprocessingInfo(null);
     setModel(null);
+    setModelParameters(null);
     setEvaluation(null);
   };
 
@@ -90,12 +97,32 @@ const LogisticRegressionApp = () => {
     setEdaDecisions(prev => [...prev, ...decisions]);
   };
 
+  const handleDataUploaded = (uploadedData, uploadedFileName) => {
+    setData(uploadedData);
+    setFileName(uploadedFileName || 'dataset');
+  };
+
+  const handleSplitComplete = (splitResult, parameters) => {
+    setSplitData(splitResult);
+    setSplitParameters(parameters);
+  };
+
+  const handlePreprocessingComplete = (processedData, processingInfo) => {
+    setPreprocessedData(processedData);
+    setPreprocessingInfo(processingInfo);
+  };
+
+  const handleModelTrained = (trainedModel, parameters) => {
+    setModel(trainedModel);
+    setModelParameters(parameters);
+  };
+
   const renderCurrentStep = () => {
     switch (currentStep) {
       case 1:
         return (
           <DataUpload
-            onDataUploaded={setData}
+            onDataUploaded={handleDataUploaded}
             onNext={handleNext}
             data={data}
           />
@@ -115,7 +142,7 @@ const LogisticRegressionApp = () => {
           <TrainTestSplit
             data={data}
             selectedColumns={selectedColumns}
-            onSplitComplete={setSplitData}
+            onSplitComplete={handleSplitComplete}
             onNext={handleNext}
             onPrevious={handlePrevious}
             splitData={splitData}
@@ -150,7 +177,7 @@ const LogisticRegressionApp = () => {
           <Preprocessing
             data={splitData}
             selectedColumns={selectedColumns}
-            onPreprocessingComplete={setPreprocessedData}
+            onPreprocessingComplete={handlePreprocessingComplete}
             onNext={handleNext}
             onPrevious={handlePrevious}
             preprocessedData={preprocessedData}
@@ -162,7 +189,7 @@ const LogisticRegressionApp = () => {
             data={splitData}
             preprocessedData={preprocessedData}
             selectedColumns={selectedColumns}
-            onModelTrained={setModel}
+            onModelTrained={handleModelTrained}
             onNext={handleNext}
             onPrevious={handlePrevious}
             model={model}
@@ -177,6 +204,12 @@ const LogisticRegressionApp = () => {
             onNext={handleNext}
             onPrevious={handlePrevious}
             evaluation={evaluation}
+            selectedColumns={selectedColumns}
+            correlationResults={correlationResults}
+            preprocessingInfo={preprocessingInfo}
+            trainTestSplit={splitParameters}
+            modelParameters={modelParameters}
+            fileName={fileName}
           />
         );
       case 9:
