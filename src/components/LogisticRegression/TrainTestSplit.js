@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, ArrowRight, BarChart, Shuffle, Info, AlertTriangle, CheckCircle } from 'lucide-react';
+import { ArrowLeft, ArrowRight, BarChart, Shuffle, Info, AlertTriangle, CheckCircle, Upload, Zap } from 'lucide-react';
 import HelpTooltip from '../HelpTooltip';
 import _ from 'lodash';
 
-const TrainTestSplit = ({ data, selectedColumns, onSplitComplete, onNext, onPrevious, splitData }) => {
+const TrainTestSplit = ({ data, selectedColumns, onSplitComplete, onNext, onPrevious, onSkipToEvaluation, splitData, model }) => {
   const [splitRatio, setSplitRatio] = useState(0.8);
   const [stratify, setStratify] = useState(false);
   const [randomSeed, setRandomSeed] = useState(42);
@@ -71,7 +71,7 @@ const TrainTestSplit = ({ data, selectedColumns, onSplitComplete, onNext, onPrev
 
     // Generate actual split data
     const actualSplit = performActualSplit(preview);
-    onSplitComplete(actualSplit);
+    onSplitComplete(actualSplit, { splitRatio, stratify, randomSeed, splitMethod });
   };
 
   const performActualSplit = (preview) => {
@@ -125,6 +125,7 @@ const TrainTestSplit = ({ data, selectedColumns, onSplitComplete, onNext, onPrev
   };
 
   const canProceed = splitPreview && splitPreview.trainSize > 5 && splitPreview.testSize > 5;
+  const canSkipToEvaluation = model && splitData;
 
   return (
     <div className="space-y-6">
@@ -159,30 +160,57 @@ const TrainTestSplit = ({ data, selectedColumns, onSplitComplete, onNext, onPrev
         </p>
       </div>
 
+      {/* Skip to Evaluation Option */}
+      {canSkipToEvaluation && (
+        <div className="card max-w-4xl mx-auto bg-gradient-to-br from-purple-50 to-blue-50 border-purple-200">
+          <div className="flex items-center space-x-3 mb-4">
+            <Zap className="w-6 h-6 text-purple-600" />
+            <h2 className="text-xl font-semibold text-purple-900">Skip Training & Load Model</h2>
+          </div>
+          
+          <div className="space-y-4">
+            <p className="text-purple-800">
+              You have a trained model loaded and data split ready. You can skip the training steps and go directly to model evaluation.
+            </p>
+            
+            <div className="bg-white rounded-lg p-4 border border-purple-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-medium text-purple-900 mb-2">Current Status:</h3>
+                  <ul className="text-sm text-purple-700 space-y-1">
+                    <li>✅ Data uploaded and columns selected</li>
+                    <li>✅ Train/test split ready ({splitData.trainSize} train, {splitData.testSize} test)</li>
+                    <li>✅ Model loaded and ready for evaluation</li>
+                  </ul>
+                </div>
+                <button
+                  onClick={onSkipToEvaluation}
+                  className="btn-primary bg-purple-600 hover:bg-purple-700 flex items-center space-x-2"
+                >
+                  <Upload className="w-4 h-4" />
+                  <span>Skip to Evaluation</span>
+                </button>
+              </div>
+            </div>
+            
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+              <div className="flex items-start space-x-2">
+                <Info className="w-4 h-4 text-yellow-600 mt-0.5" />
+                <p className="text-yellow-800 text-sm">
+                  <strong>Note:</strong> This will skip correlation analysis, EDA, preprocessing, and training steps. 
+                  Use this option when you have a pre-trained model to evaluate on your current data.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Configuration Panel */}
       <div className="card max-w-4xl mx-auto">
         <div className="flex items-center space-x-3 mb-6">
           <Shuffle className="w-6 h-6 text-primary-600" />
           <h2 className="text-xl font-semibold text-gray-900">Split Configuration</h2>
-          <HelpTooltip 
-            title="Configuring Your Data Split" 
-            level="beginner"
-            content={
-              <div className="space-y-3">
-                <p><strong>Split Ratio:</strong> How much data to use for training vs. testing</p>
-                <ul className="space-y-1 text-sm">
-                  <li>• <strong>80/20:</strong> Standard choice - good balance</li>
-                  <li>• <strong>70/30:</strong> More testing data - better evaluation</li>
-                  <li>• <strong>90/10:</strong> More training data - use with small datasets</li>
-                </ul>
-                <p><strong>Stratification:</strong> Keep target proportions balanced in both sets</p>
-                <p><strong>Random Seed:</strong> Makes your split reproducible</p>
-                <div className="bg-green-50 p-3 rounded-lg">
-                  <p className="text-green-800 font-medium">💡 We'll recommend the best settings for your data!</p>
-                </div>
-              </div>
-            }
-          />
         </div>
 
         <div className="grid md:grid-cols-2 gap-6">
@@ -215,23 +243,6 @@ const TrainTestSplit = ({ data, selectedColumns, onSplitComplete, onNext, onPrev
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Stratification
-              <HelpTooltip 
-                title="What is Stratification?" 
-                level="beginner"
-                content={
-                  <div className="space-y-2">
-                    <p><strong>Stratification ensures both training and test sets have the same proportions of your target variable.</strong></p>
-                    <p><strong>Example:</strong> If your data is 70% "Yes" and 30% "No":</p>
-                    <ul className="space-y-1 text-sm">
-                      <li>• <strong>With stratification:</strong> Both train and test will have 70% "Yes", 30% "No"</li>
-                      <li>• <strong>Without stratification:</strong> You might get 80% "Yes" in training, 60% "Yes" in testing</li>
-                    </ul>
-                    <p className="text-blue-800 text-sm bg-blue-50 p-2 rounded">
-                      💡 <strong>Use when:</strong> Your target classes are imbalanced (e.g., 80/20 split)
-                    </p>
-                  </div>
-                }
-              />
             </label>
             <div className="space-y-3">
               <label className="flex items-center space-x-3">
@@ -261,24 +272,6 @@ const TrainTestSplit = ({ data, selectedColumns, onSplitComplete, onNext, onPrev
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Random Seed
-              <HelpTooltip 
-                title="Random Seed for Reproducibility" 
-                level="beginner"
-                content={
-                  <div className="space-y-2">
-                    <p><strong>What is a random seed?</strong> A number that ensures you get the same "random" split every time.</p>
-                    <p><strong>Why does this matter?</strong></p>
-                    <ul className="space-y-1 text-sm">
-                      <li>• <strong>Reproducibility:</strong> Others can recreate your exact results</li>
-                      <li>• <strong>Debugging:</strong> Same split helps identify issues</li>
-                      <li>• <strong>Comparison:</strong> Fair comparison between different models</li>
-                    </ul>
-                    <p className="text-green-800 text-sm bg-green-50 p-2 rounded">
-                      🎯 <strong>DA4 Tip:</strong> Always document your random seed in reports!
-                    </p>
-                  </div>
-                }
-              />
             </label>
             <input
               type="number"
@@ -301,23 +294,6 @@ const TrainTestSplit = ({ data, selectedColumns, onSplitComplete, onNext, onPrev
           <div className="flex items-center space-x-3 mb-6">
             <BarChart className="w-6 h-6 text-green-600" />
             <h2 className="text-xl font-semibold text-gray-900">Split Preview</h2>
-            <HelpTooltip 
-              title="Understanding Your Split Preview" 
-              level="beginner"
-              content={
-                <div className="space-y-2">
-                  <p><strong>This preview shows you exactly how your data will be divided:</strong></p>
-                  <ul className="space-y-1 text-sm">
-                    <li>• <strong>Size:</strong> Number of rows in each set</li>
-                    <li>• <strong>Distribution:</strong> How many of each target class</li>
-                    <li>• <strong>Balance:</strong> Whether proportions are maintained</li>
-                  </ul>
-                  <p className="text-blue-800 text-sm bg-blue-50 p-2 rounded">
-                    💡 Look for roughly equal proportions in both training and test sets!
-                  </p>
-                </div>
-              }
-            />
           </div>
 
           <div className="grid md:grid-cols-2 gap-6">
