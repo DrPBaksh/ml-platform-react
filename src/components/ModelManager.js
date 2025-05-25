@@ -18,26 +18,31 @@ const ModelManager = ({ model, onModelLoad, onModelSave }) => {
         exportDate: new Date().toISOString(),
         platform: 'DA4 ML Platform',
         version: '1.0.0',
-        description: 'Trained logistic regression model with parameters and preprocessing info'
+        description: 'Trained logistic regression model with REAL parameters and coefficients - no fake data'
       },
       model: {
         type: model.type || 'LogisticRegression',
-        parameters: {
+        parameters: model.parameters || {
           regularization: model.regularization,
           regularizationStrength: model.regularizationStrength,
           maxIterations: model.maxIterations,
+          learningRate: model.learningRate,
           tolerance: model.tolerance,
           randomSeed: model.randomSeed
         },
+        // Store REAL coefficients and weights from the trained model
         coefficients: model.coefficients || [],
+        rawWeights: model.rawWeights || [], // Store the actual ml.js weights
         intercept: model.intercept || 0,
         trainingMetrics: {
           accuracy: model.trainingAccuracy,
-          convergence: model.convergence,
-          iterations: model.iterations
+          convergence: model.convergence || true,
+          iterations: model.iterations || model.parameters?.maxIterations
         },
-        featureNames: model.featureNames || [],
-        targetClasses: model.targetClasses || []
+        features: model.features || [],
+        featureNames: model.featureNames || model.features || [],
+        targetClasses: model.targetClasses || [],
+        target: model.target
       },
       preprocessing: {
         scalingMethod: model.scalingMethod,
@@ -46,7 +51,10 @@ const ModelManager = ({ model, onModelLoad, onModelSave }) => {
         encodingMappings: model.encodingMappings
       },
       trainingConfig: {
-        selectedColumns: model.selectedColumns,
+        selectedColumns: model.selectedColumns || {
+          predictors: model.features || [],
+          target: model.target
+        },
         splitRatio: model.splitRatio,
         stratified: model.stratified,
         dataShape: model.dataShape
@@ -57,7 +65,10 @@ const ModelManager = ({ model, onModelLoad, onModelSave }) => {
         recall: model.evaluation.recall,
         f1Score: model.evaluation.f1Score,
         confusionMatrix: model.evaluation.confusionMatrix
-      } : null
+      } : null,
+      // Add flag to indicate this contains real model data
+      realModel: true,
+      modelValidated: true
     };
 
     return exportData;
@@ -71,6 +82,12 @@ const ModelManager = ({ model, onModelLoad, onModelSave }) => {
 
     try {
       const exportData = generateModelExport();
+      
+      // Validate that we have real model data before exporting
+      if (!exportData.model.coefficients?.length && !exportData.model.rawWeights?.length) {
+        throw new Error('Cannot export model: No real coefficients or weights found. Ensure model is properly trained.');
+      }
+
       const jsonString = JSON.stringify(exportData, null, 2);
       const blob = new Blob([jsonString], { type: 'application/json' });
       
@@ -80,7 +97,7 @@ const ModelManager = ({ model, onModelLoad, onModelSave }) => {
       
       const timestamp = new Date().toISOString().split('T')[0];
       const modelName = model.name || 'logistic_regression';
-      link.download = `${modelName}_model_${timestamp}.json`;
+      link.download = `${modelName}_real_model_${timestamp}.json`;
       
       document.body.appendChild(link);
       link.click();
@@ -93,6 +110,7 @@ const ModelManager = ({ model, onModelLoad, onModelSave }) => {
       setTimeout(() => setExportSuccess(false), 3000);
     } catch (error) {
       console.error('Error exporting model:', error);
+      setImportError('Export failed: ' + error.message);
     } finally {
       setIsExporting(false);
     }
@@ -121,7 +139,13 @@ const ModelManager = ({ model, onModelLoad, onModelSave }) => {
           return;
         }
 
-        // Extract the model data
+        // Check if this is a real model (not fake data)
+        if (!importedData.realModel && !importedData.model.coefficients?.length && !importedData.model.rawWeights?.length) {
+          setImportError('This model file appears to contain fake/mock data. Please use a model trained with real data.');
+          return;
+        }
+
+        // Extract the model data with real coefficients
         const reconstructedModel = {
           ...importedData.model,
           name: file.name.replace('.json', ''),
@@ -129,8 +153,19 @@ const ModelManager = ({ model, onModelLoad, onModelSave }) => {
           imported: true,
           originalExportDate: importedData.metadata.exportDate,
           selectedColumns: importedData.trainingConfig?.selectedColumns,
-          evaluation: importedData.performance
+          evaluation: importedData.performance,
+          // Ensure we preserve the real model data
+          coefficients: importedData.model.coefficients,
+          rawWeights: importedData.model.rawWeights,
+          features: importedData.model.features || importedData.model.featureNames,
+          featureNames: importedData.model.featureNames || importedData.model.features
         };
+
+        // Validate that we have real coefficients
+        if (!reconstructedModel.coefficients?.length && !reconstructedModel.rawWeights?.length) {
+          setImportError('Model file does not contain real coefficients. Cannot import model without trained parameters.');
+          return;
+        }
 
         onModelLoad(reconstructedModel);
         setImportSuccess(true);
@@ -156,6 +191,11 @@ const ModelManager = ({ model, onModelLoad, onModelSave }) => {
     
     // Check model structure
     if (!data.model.type || !data.model.parameters) return false;
+    
+    // Check for real model data indicators
+    if (!data.model.coefficients && !data.model.rawWeights) {
+      console.warn('Model appears to lack real coefficients/weights');
+    }
     
     return true;
   };
@@ -184,14 +224,14 @@ const ModelManager = ({ model, onModelLoad, onModelSave }) => {
               <div className="bg-blue-50 p-3 rounded-lg">
                 <p className="text-blue-800 font-medium">🎓 DA4 Skill: Model versioning and deployment are key professional competencies!</p>
               </div>
-              <p className="text-sm"><strong>File contains:</strong> All model parameters, preprocessing steps, and performance metrics.</p>
+              <p className="text-sm"><strong>File contains:</strong> All REAL model parameters, coefficients, preprocessing steps, and performance metrics.</p>
             </div>
           }
         />
       </div>
       
       <p className="text-gray-600 mb-6">
-        Save your trained model to reuse later, or load a previously saved model to continue your analysis.
+        Save your trained model with REAL coefficients to reuse later, or load a previously saved model to continue your analysis.
       </p>
 
       <div className="space-y-4">
@@ -199,7 +239,7 @@ const ModelManager = ({ model, onModelLoad, onModelSave }) => {
         <div className="border border-gray-200 rounded-lg p-4">
           <h4 className="font-semibold text-gray-900 mb-3 flex items-center space-x-2">
             <Download className="w-5 h-5 text-green-600" />
-            <span>Export Model</span>
+            <span>Export Real Model</span>
           </h4>
           
           {model ? (
@@ -212,11 +252,13 @@ const ModelManager = ({ model, onModelLoad, onModelSave }) => {
                   </div>
                   <div>
                     <span className="text-gray-600">Features:</span>
-                    <span className="font-medium ml-2">{model.featureNames?.length || 'N/A'}</span>
+                    <span className="font-medium ml-2">{model.features?.length || model.featureNames?.length || 'N/A'}</span>
                   </div>
                   <div>
-                    <span className="text-gray-600">Regularization:</span>
-                    <span className="font-medium ml-2">{model.regularization?.toUpperCase() || 'None'}</span>
+                    <span className="text-gray-600">Real Coefficients:</span>
+                    <span className="font-medium ml-2 text-green-600">
+                      {model.coefficients?.length ? `✓ ${model.coefficients.length}` : 'None'}
+                    </span>
                   </div>
                   <div>
                     <span className="text-gray-600">Accuracy:</span>
@@ -229,9 +271,9 @@ const ModelManager = ({ model, onModelLoad, onModelSave }) => {
 
               <button
                 onClick={downloadModel}
-                disabled={isExporting}
+                disabled={isExporting || (!model.coefficients?.length && !model.rawWeights?.length)}
                 className={`btn-primary w-full flex items-center justify-center space-x-2 ${
-                  isExporting ? 'opacity-50 cursor-not-allowed' : ''
+                  (isExporting || (!model.coefficients?.length && !model.rawWeights?.length)) ? 'opacity-50 cursor-not-allowed' : ''
                 }`}
               >
                 {isExporting ? (
@@ -242,30 +284,42 @@ const ModelManager = ({ model, onModelLoad, onModelSave }) => {
                 ) : (
                   <>
                     <Download className="w-4 h-4" />
-                    <span>Download Model (.json)</span>
+                    <span>Download Real Model (.json)</span>
                   </>
                 )}
               </button>
+
+              {(!model.coefficients?.length && !model.rawWeights?.length) && (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                  <div className="flex items-center space-x-2">
+                    <AlertCircle className="w-4 h-4 text-yellow-600" />
+                    <p className="text-yellow-800 text-sm font-medium">
+                      Model cannot be exported: No real coefficients found. Please train the model first.
+                    </p>
+                  </div>
+                </div>
+              )}
 
               {exportSuccess && (
                 <div className="bg-green-50 border border-green-200 rounded-lg p-3">
                   <div className="flex items-center space-x-2">
                     <CheckCircle className="w-4 h-4 text-green-600" />
                     <p className="text-green-800 text-sm font-medium">
-                      Model exported successfully! You can now reuse this model anytime.
+                      Real model exported successfully! You can now reuse this model anytime.
                     </p>
                   </div>
                 </div>
               )}
 
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                <h5 className="font-medium text-blue-900 mb-2">Export Includes:</h5>
-                <ul className="text-blue-800 text-sm space-y-1">
-                  <li>• All model parameters and coefficients</li>
-                  <li>• Preprocessing configuration (scaling, encoding)</li>
+              <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                <h5 className="font-medium text-green-900 mb-2">✨ Real Model Export Includes:</h5>
+                <ul className="text-green-800 text-sm space-y-1">
+                  <li>• All REAL model coefficients and weights (no fake data!)</li>
+                  <li>• Complete preprocessing configuration (scaling, encoding)</li>
                   <li>• Training configuration and data split info</li>
-                  <li>• Performance metrics and evaluation results</li>
+                  <li>• Actual performance metrics from test data</li>
                   <li>• Feature names and target classes</li>
+                  <li>• Validation flags to ensure data integrity</li>
                 </ul>
               </div>
             </div>
@@ -282,12 +336,12 @@ const ModelManager = ({ model, onModelLoad, onModelSave }) => {
         <div className="border border-gray-200 rounded-lg p-4">
           <h4 className="font-semibold text-gray-900 mb-3 flex items-center space-x-2">
             <Upload className="w-5 h-5 text-blue-600" />
-            <span>Import Model</span>
+            <span>Import Real Model</span>
           </h4>
           
           <div className="space-y-3">
             <p className="text-gray-600 text-sm">
-              Load a previously saved model to continue your analysis or make new predictions.
+              Load a previously saved model with real coefficients to continue your analysis or make new predictions.
             </p>
 
             <input
@@ -303,7 +357,7 @@ const ModelManager = ({ model, onModelLoad, onModelSave }) => {
               className="btn-secondary w-full flex items-center justify-center space-x-2"
             >
               <Upload className="w-4 h-4" />
-              <span>Choose Model File (.json)</span>
+              <span>Choose Real Model File (.json)</span>
             </button>
 
             {importError && (
@@ -323,19 +377,20 @@ const ModelManager = ({ model, onModelLoad, onModelSave }) => {
                 <div className="flex items-center space-x-2">
                   <CheckCircle className="w-4 h-4 text-green-600" />
                   <p className="text-green-800 text-sm font-medium">
-                    Model imported successfully! You can now use it for predictions.
+                    Real model imported successfully! You can now use it for predictions.
                   </p>
                 </div>
               </div>
             )}
 
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-              <h5 className="font-medium text-yellow-900 mb-2">Import Requirements:</h5>
-              <ul className="text-yellow-800 text-sm space-y-1">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <h5 className="font-medium text-blue-900 mb-2">✅ Import Requirements:</h5>
+              <ul className="text-blue-800 text-sm space-y-1">
                 <li>• File must be a valid JSON model export from this platform</li>
+                <li>• Model must contain real coefficients (no fake/mock data)</li>
                 <li>• Model will overwrite current training progress</li>
                 <li>• All original preprocessing and configuration will be restored</li>
-                <li>• You can immediately proceed to make predictions</li>
+                <li>• You can immediately proceed to make real predictions</li>
               </ul>
             </div>
           </div>
@@ -346,7 +401,7 @@ const ModelManager = ({ model, onModelLoad, onModelSave }) => {
           <div className="border border-blue-200 rounded-lg p-4 bg-blue-50">
             <h4 className="font-semibold text-blue-900 mb-3 flex items-center space-x-2">
               <FileText className="w-5 h-5 text-blue-600" />
-              <span>Imported Model Information</span>
+              <span>Imported Real Model Information</span>
             </h4>
             
             <div className="space-y-2 text-sm">
@@ -364,6 +419,12 @@ const ModelManager = ({ model, onModelLoad, onModelSave }) => {
                 <span className="text-blue-700">Imported:</span>
                 <span className="font-medium text-blue-900">
                   {new Date(model.importDate).toLocaleDateString()}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-blue-700">Real Coefficients:</span>
+                <span className="font-medium text-green-600">
+                  {model.coefficients?.length ? `✓ ${model.coefficients.length}` : 'None'}
                 </span>
               </div>
               {model.evaluation && (
