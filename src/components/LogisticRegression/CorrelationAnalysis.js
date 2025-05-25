@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { ArrowLeft, ArrowRight, AlertTriangle, Info, TrendingUp } from 'lucide-react';
+import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { ArrowLeft, ArrowRight, AlertTriangle, Info, TrendingUp, Eye, EyeOff } from 'lucide-react';
 import HelpTooltip from '../HelpTooltip';
 import _ from 'lodash';
 
@@ -10,6 +10,9 @@ const CorrelationAnalysis = ({ data, selectedColumns, onNext, onPrevious, onColu
   const [selectedPredictor2, setSelectedPredictor2] = useState('');
   const [scatterData, setScatterData] = useState([]);
   const [highlyCorrelated, setHighlyCorrelated] = useState([]);
+  const [showTargetOverlay, setShowTargetOverlay] = useState(false);
+  const [targetColoredData, setTargetColoredData] = useState([]);
+  const [targetClasses, setTargetClasses] = useState([]);
 
   useEffect(() => {
     if (data && selectedColumns.predictors.length > 1) {
@@ -21,7 +24,7 @@ const CorrelationAnalysis = ({ data, selectedColumns, onNext, onPrevious, onColu
     if (selectedPredictor1 && selectedPredictor2 && selectedPredictor1 !== selectedPredictor2 && data) {
       generateScatterData();
     }
-  }, [selectedPredictor1, selectedPredictor2, data]);
+  }, [selectedPredictor1, selectedPredictor2, data, showTargetOverlay]);
 
   const calculateCorrelationMatrix = () => {
     const numericPredictors = selectedColumns.predictors.filter(pred => {
@@ -91,6 +94,7 @@ const CorrelationAnalysis = ({ data, selectedColumns, onNext, onPrevious, onColu
       .map((row, index) => ({
         x: parseFloat(row[selectedPredictor1]),
         y: parseFloat(row[selectedPredictor2]),
+        target: row[selectedColumns.target],
         originalIndex: index
       }))
       .filter(point => !isNaN(point.x) && !isNaN(point.y));
@@ -98,17 +102,56 @@ const CorrelationAnalysis = ({ data, selectedColumns, onNext, onPrevious, onColu
     // Sort by X-axis values for better visualization
     const sortedPairs = rawPairs.sort((a, b) => a.x - b.x);
 
-    // Ensure we have clean data for the scatter plot
-    const cleanData = sortedPairs.map((point, index) => ({
-      x: Number(point.x.toFixed(3)), // Round to 3 decimal places for cleaner display
-      y: Number(point.y.toFixed(3)),
-      id: point.originalIndex // Keep track of original data row
-    }));
+    if (showTargetOverlay && selectedColumns.target) {
+      // Get unique target classes for color mapping
+      const uniqueClasses = [...new Set(rawPairs.map(point => point.target))].sort();
+      setTargetClasses(uniqueClasses);
+
+      // Define colors for different classes (supports up to 8 classes)
+      const classColors = [
+        '#0ea5e9', // Blue
+        '#f59e0b', // Amber
+        '#10b981', // Emerald
+        '#f87171', // Red
+        '#a78bfa', // Violet
+        '#34d399', // Green
+        '#fb7185', // Pink
+        '#fbbf24'  // Yellow
+      ];
+
+      // Group data by target class
+      const groupedData = _.groupBy(sortedPairs, 'target');
+      const coloredData = [];
+
+      Object.keys(groupedData).forEach((targetClass, index) => {
+        const classData = groupedData[targetClass].map(point => ({
+          x: Number(point.x.toFixed(3)),
+          y: Number(point.y.toFixed(3)),
+          target: point.target,
+          id: point.originalIndex,
+          fill: classColors[index % classColors.length]
+        }));
+        coloredData.push({
+          name: `${selectedColumns.target}: ${targetClass}`,
+          data: classData,
+          fill: classColors[index % classColors.length]
+        });
+      });
+
+      setTargetColoredData(coloredData);
+    } else {
+      // Standard single-color scatter plot
+      const cleanData = sortedPairs.map((point, index) => ({
+        x: Number(point.x.toFixed(3)),
+        y: Number(point.y.toFixed(3)),
+        target: point.target,
+        id: point.originalIndex
+      }));
+      
+      setScatterData(cleanData);
+    }
     
-    console.log(`Generated ${cleanData.length} data points for scatter plot`);
-    console.log('Sample data points:', cleanData.slice(0, 5));
-    
-    setScatterData(cleanData);
+    console.log(`Generated ${sortedPairs.length} data points for scatter plot`);
   };
 
   const removeHighlyCorrelatedVariable = (pred1, pred2) => {
@@ -121,7 +164,6 @@ const CorrelationAnalysis = ({ data, selectedColumns, onNext, onPrevious, onColu
 
   const handlePredictor1Change = (value) => {
     setSelectedPredictor1(value);
-    // If both predictors are the same, automatically change the second one
     if (value === selectedPredictor2) {
       const numericPredictors = selectedColumns.predictors.filter(pred => {
         const values = data.data.map(row => parseFloat(row[pred])).filter(v => !isNaN(v));
@@ -136,7 +178,6 @@ const CorrelationAnalysis = ({ data, selectedColumns, onNext, onPrevious, onColu
 
   const handlePredictor2Change = (value) => {
     setSelectedPredictor2(value);
-    // If both predictors are the same, automatically change the first one
     if (value === selectedPredictor1) {
       const numericPredictors = selectedColumns.predictors.filter(pred => {
         const values = data.data.map(row => parseFloat(row[pred])).filter(v => !isNaN(v));
@@ -162,6 +203,9 @@ const CorrelationAnalysis = ({ data, selectedColumns, onNext, onPrevious, onColu
         <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg">
           <p className="font-medium text-gray-900">{selectedPredictor1}: {data.x}</p>
           <p className="font-medium text-gray-900">{selectedPredictor2}: {data.y}</p>
+          {showTargetOverlay && selectedColumns.target && (
+            <p className="font-medium text-gray-900">{selectedColumns.target}: {data.target}</p>
+          )}
           <p className="text-sm text-gray-600">Data Point #{data.id + 1}</p>
         </div>
       );
@@ -337,6 +381,11 @@ const CorrelationAnalysis = ({ data, selectedColumns, onNext, onPrevious, onColu
                       <li>• <strong>Tight line:</strong> Strong correlation</li>
                       <li>• <strong>Scattered points:</strong> Weak correlation</li>
                     </ul>
+                    {selectedColumns.target && (
+                      <div className="mt-3 p-2 bg-blue-50 rounded">
+                        <p><strong>Target Overlay:</strong> Color-code points by target variable to visualize classification patterns!</p>
+                      </div>
+                    )}
                   </div>
                 }
               />
@@ -369,6 +418,54 @@ const CorrelationAnalysis = ({ data, selectedColumns, onNext, onPrevious, onColu
               </div>
             </div>
 
+            {/* Target Variable Overlay Toggle */}
+            {selectedColumns.target && (
+              <div className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <button
+                      onClick={() => setShowTargetOverlay(!showTargetOverlay)}
+                      className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
+                        showTargetOverlay 
+                          ? 'bg-blue-600 text-white' 
+                          : 'bg-white text-blue-600 border border-blue-300'
+                      }`}
+                    >
+                      {showTargetOverlay ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                      <span className="font-medium">
+                        {showTargetOverlay ? 'Hide' : 'Show'} Target Variable Overlay
+                      </span>
+                    </button>
+                    <div className="text-sm text-blue-800">
+                      <strong>Target:</strong> {selectedColumns.target}
+                    </div>
+                  </div>
+                  <HelpTooltip 
+                    title="Target Variable Overlay" 
+                    level="intermediate"
+                    content={
+                      <div className="space-y-2">
+                        <p>This feature colors data points by their target variable value, helping you:</p>
+                        <ul className="space-y-1 text-sm">
+                          <li>• <strong>Visualize class separation:</strong> See how well predictors separate different classes</li>
+                          <li>• <strong>Identify decision boundaries:</strong> Understand where classification occurs</li>
+                          <li>• <strong>Assess feature quality:</strong> Good predictors show clear color clustering</li>
+                          <li>• <strong>Spot patterns:</strong> Discover non-linear relationships in classification problems</li>
+                        </ul>
+                        <div className="bg-blue-50 p-2 rounded mt-2">
+                          <p className="text-blue-800 text-sm"><strong>DA4 Tip:</strong> This visualization helps you understand your classification problem before building the model!</p>
+                        </div>
+                      </div>
+                    }
+                  />
+                </div>
+                <p className="text-sm text-blue-700 mt-2">
+                  <strong>Note:</strong> This overlay may help you visualize how your predictors relate to the classification problem - 
+                  look for clear separation between different colored clusters!
+                </p>
+              </div>
+            )}
+
             {/* Warning if same variable selected */}
             {selectedPredictor1 === selectedPredictor2 && (
               <div className="mb-4 bg-yellow-50 border border-yellow-200 rounded-lg p-3">
@@ -381,21 +478,31 @@ const CorrelationAnalysis = ({ data, selectedColumns, onNext, onPrevious, onColu
               </div>
             )}
 
-            {scatterData.length > 0 && selectedPredictor1 !== selectedPredictor2 && (
+            {((scatterData.length > 0 && !showTargetOverlay) || (targetColoredData.length > 0 && showTargetOverlay)) && selectedPredictor1 !== selectedPredictor2 && (
               <>
                 {/* Data Information */}
                 <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-3">
-                  <div className="flex items-center space-x-2">
-                    <Info className="w-4 h-4 text-blue-600" />
-                    <p className="text-blue-800 text-sm">
-                      Displaying {scatterData.length} data points (sorted by {selectedPredictor1} for better visualization)
-                    </p>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <Info className="w-4 h-4 text-blue-600" />
+                      <p className="text-blue-800 text-sm">
+                        Displaying {showTargetOverlay 
+                          ? targetColoredData.reduce((sum, group) => sum + group.data.length, 0)
+                          : scatterData.length
+                        } data points (sorted by {selectedPredictor1} for better visualization)
+                      </p>
+                    </div>
+                    {showTargetOverlay && targetClasses.length > 0 && (
+                      <div className="text-sm text-blue-800">
+                        <strong>{targetClasses.length} classes detected:</strong> {targetClasses.join(', ')}
+                      </div>
+                    )}
                   </div>
                 </div>
 
                 <div className="h-80 mb-4">
                   <ResponsiveContainer width="100%" height="100%">
-                    <ScatterChart data={scatterData} margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
+                    <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                       <XAxis 
                         dataKey="x" 
@@ -412,12 +519,30 @@ const CorrelationAnalysis = ({ data, selectedColumns, onNext, onPrevious, onColu
                         tickFormatter={(value) => value.toFixed(1)}
                       />
                       <Tooltip content={<CustomTooltip />} />
-                      <Scatter 
-                        fill="#0ea5e9" 
-                        fillOpacity={0.7}
-                        stroke="#0284c7"
-                        strokeWidth={1}
-                      />
+                      {showTargetOverlay && selectedColumns.target ? (
+                        <>
+                          <Legend />
+                          {targetColoredData.map((group, index) => (
+                            <Scatter
+                              key={index}
+                              name={group.name}
+                              data={group.data}
+                              fill={group.fill}
+                              fillOpacity={0.7}
+                              stroke={group.fill}
+                              strokeWidth={1}
+                            />
+                          ))}
+                        </>
+                      ) : (
+                        <Scatter 
+                          data={scatterData}
+                          fill="#0ea5e9" 
+                          fillOpacity={0.7}
+                          stroke="#0284c7"
+                          strokeWidth={1}
+                        />
+                      )}
                     </ScatterChart>
                   </ResponsiveContainer>
                 </div>
@@ -437,6 +562,12 @@ const CorrelationAnalysis = ({ data, selectedColumns, onNext, onPrevious, onColu
                         ? "Moderate correlation - monitor for multicollinearity"
                         : "Weak correlation - variables are largely independent"}
                     </p>
+                    {showTargetOverlay && selectedColumns.target && (
+                      <p className="text-sm text-blue-600 mt-2">
+                        <strong>Classification Insight:</strong> Look for clear separation between different colored clusters - 
+                        this indicates how well these predictors distinguish between target classes.
+                      </p>
+                    )}
                   </div>
                 )}
               </>
