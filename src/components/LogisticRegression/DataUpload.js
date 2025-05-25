@@ -1,9 +1,9 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Upload, AlertCircle, CheckCircle, FileText, ArrowRight, Shield, Lock, Database, Sparkles, Info, AlertTriangle, FileSpreadsheet, Zap } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { Upload, AlertCircle, CheckCircle, FileText, ArrowRight, Shield, Lock, Database, Sparkles, Info, AlertTriangle, FileSpreadsheet, Zap, Download } from 'lucide-react';
 import Papa from 'papaparse';
 import HelpTooltip from '../HelpTooltip';
 
-const DataUpload = ({ onDataUploaded, onNext, data }) => {
+const DataUpload = ({ onDataUploaded, onNext, data, onSkipToEvaluationWithModel }) => {
   const [dragActive, setDragActive] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState(null);
@@ -11,7 +11,9 @@ const DataUpload = ({ onDataUploaded, onNext, data }) => {
   const [fileInfo, setFileInfo] = useState(null);
   const [loadingExample, setLoadingExample] = useState(false);
   const [showCleaningTips, setShowCleaningTips] = useState(false);
+  const [loadingModel, setLoadingModel] = useState(false);
   const fileInputRef = useRef(null);
+  const modelFileInputRef = useRef(null);
 
   const handleDrag = (e) => {
     e.preventDefault();
@@ -28,6 +30,75 @@ const DataUpload = ({ onDataUploaded, onNext, data }) => {
 
   const handleChange = (e) => {
     if (e.target.files?.[0]) handleFile(e.target.files[0]);
+  };
+
+  const handleModelFileChange = (e) => {
+    if (e.target.files?.[0]) handleModelFile(e.target.files[0]);
+  };
+
+  const handleModelFile = async (file) => {
+    if (!file.name.toLowerCase().endsWith('.json')) {
+      setError('Please upload a JSON model file');
+      return;
+    }
+
+    if (!data) {
+      setError('Please upload your CSV data first, then load the model');
+      return;
+    }
+
+    setLoadingModel(true);
+    setError(null);
+
+    try {
+      const fileContent = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target.result);
+        reader.onerror = reject;
+        reader.readAsText(file);
+      });
+
+      const modelData = JSON.parse(fileContent);
+      
+      // Validate model structure
+      if (!modelData.model || !modelData.metadata) {
+        throw new Error('Invalid model file format');
+      }
+
+      // Create a simplified train/test split for evaluation
+      const totalRows = data.data.length;
+      const trainSize = Math.floor(totalRows * 0.8);
+      const shuffled = [...data.data].sort(() => Math.random() - 0.5);
+      
+      const splitData = {
+        trainData: shuffled.slice(0, trainSize),
+        testData: shuffled.slice(trainSize),
+        trainSize: trainSize,
+        testSize: totalRows - trainSize
+      };
+
+      // Extract columns from model or use data columns
+      const selectedColumns = modelData.trainingConfig?.selectedColumns || {
+        predictors: data.meta.fields.slice(0, -1),
+        target: data.meta.fields[data.meta.fields.length - 1]
+      };
+
+      // Reconstruct model for evaluation
+      const reconstructedModel = {
+        ...modelData.model,
+        imported: true,
+        name: file.name.replace('.json', ''),
+        selectedColumns: selectedColumns
+      };
+
+      // Skip to evaluation with all necessary data
+      onSkipToEvaluationWithModel(reconstructedModel, splitData, selectedColumns);
+
+    } catch (error) {
+      setError('Error loading model: ' + error.message);
+    } finally {
+      setLoadingModel(false);
+    }
   };
 
   const loadIrisExample = async () => {
@@ -123,6 +194,66 @@ const DataUpload = ({ onDataUploaded, onNext, data }) => {
           Upload a CSV file to begin your machine learning analysis. Your data stays 100% private in your browser.
         </p>
       </div>
+
+      {/* Skip Training Option */}
+      {data && (
+        <div className="card max-w-4xl mx-auto bg-gradient-to-br from-purple-50 to-blue-50 border-purple-200">
+          <div className="flex items-center space-x-3 mb-4">
+            <Zap className="w-6 h-6 text-purple-600" />
+            <h2 className="text-xl font-semibold text-purple-900">Skip Training & Load Pre-trained Model</h2>
+          </div>
+          
+          <div className="space-y-4">
+            <p className="text-purple-800">
+              Have a pre-trained model? Upload your JSON model file and skip directly to evaluation on your current data.
+            </p>
+            
+            <div className="bg-white rounded-lg p-4 border border-purple-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-medium text-purple-900 mb-2">Quick Model Evaluation:</h3>
+                  <ul className="text-sm text-purple-700 space-y-1">
+                    <li>✅ Your data is uploaded and ready</li>
+                    <li>📁 Upload your saved model JSON file</li>
+                    <li>⚡ Skip directly to model evaluation</li>
+                  </ul>
+                </div>
+                <div className="flex flex-col space-y-2">
+                  <input
+                    ref={modelFileInputRef}
+                    type="file"
+                    accept=".json"
+                    onChange={handleModelFileChange}
+                    className="hidden"
+                  />
+                  <button
+                    onClick={() => modelFileInputRef.current?.click()}
+                    disabled={loadingModel}
+                    className="btn-primary bg-purple-600 hover:bg-purple-700 flex items-center space-x-2"
+                  >
+                    {loadingModel ? (
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    ) : (
+                      <Upload className="w-4 h-4" />
+                    )}
+                    <span>{loadingModel ? 'Loading...' : 'Load Model & Evaluate'}</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+              <div className="flex items-start space-x-2">
+                <Info className="w-4 h-4 text-yellow-600 mt-0.5" />
+                <p className="text-yellow-800 text-sm">
+                  <strong>Note:</strong> This will automatically create a train/test split from your data and evaluate your model immediately. 
+                  Perfect for testing saved models on new datasets.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Clean Data Notice */}
       <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-6 max-w-4xl mx-auto shadow-lg hover:shadow-xl transition-all duration-300">
